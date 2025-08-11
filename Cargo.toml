@@ -7,7 +7,6 @@ edition = "2024"
 arbitrary = { version = "1.4.1", features = ["derive"] }
 clap = { version = "4.5.43", features = ["derive"] }
 color-eyre = "0.6.5"
-directories-next = "2.0.0"
 eyre = "0.6.12"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"

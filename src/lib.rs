@@ -1,6 +1,5 @@
 pub mod cli;
 pub mod console_reuse;
-pub mod config;
 pub mod windows;
 use clap::CommandFactory;
 use clap::FromArgMatches;
@@ -28,6 +27,7 @@ pub fn init_tracing(level: Level) {
     debug!("Tracing initialized with level: {:?}", level);
 }
 
+// Entrypoint for the program to reduce coupling to the name of this crate.
 pub fn main() -> eyre::Result<()> {
     color_eyre::install()?;
     let cli = Cli::command();
