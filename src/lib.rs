@@ -1,5 +1,4 @@
 pub mod cli;
-pub mod console_reuse;
 pub mod windows;
 use clap::CommandFactory;
 use clap::FromArgMatches;
@@ -7,7 +6,7 @@ use tracing::Level;
 use tracing::debug;
 
 use crate::cli::Cli;
-use crate::console_reuse::reuse_console_if_requested;
+use crate::windows::console_reuse::reuse_console_if_requested;
 
 /// Initialize tracing subscriber with the given log level.
 /// In debug builds, include file and line number without timestamp.

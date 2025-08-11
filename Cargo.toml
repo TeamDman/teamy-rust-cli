@@ -26,3 +26,4 @@ windows = { version = "0.61.3", features = [
     "Win32_UI",
     "Win32_System_Console",
 ] }
+directories-next = "2.0.0"
