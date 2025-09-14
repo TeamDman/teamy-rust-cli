@@ -19,6 +19,7 @@ pub fn init_tracing(level: Level) {
         .with_file(true)
         .with_line_number(true)
         .without_time()
+        .with_writer(std::io::stderr)
         .finish();
     #[cfg(not(debug_assertions))]
     let subscriber = builder.finish();
