@@ -1,5 +1,6 @@
 use arbitrary::Arbitrary;
 use clap::Args;
+use tracing::info;
 use std::ffi::OsString;
 use crate::cli::to_args::ToArgs;
 
@@ -10,6 +11,7 @@ pub struct HelloGreetArgs {
 
 impl HelloGreetArgs {
     pub fn invoke(self) -> eyre::Result<()> {
+        info!(name=self.name, "Greeting");
         println!("Ahoy, {}", self.name);
         Ok(())
     }

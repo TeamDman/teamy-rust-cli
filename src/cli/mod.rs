@@ -1,12 +1,12 @@
 pub mod command;
 pub mod global_args;
+pub mod json_log_behaviour;
 pub mod to_args;
 use crate::cli::command::Command;
 use crate::cli::global_args::GlobalArgs;
 use arbitrary::Arbitrary;
 use clap::Parser;
 use std::ffi::OsString;
-use to_args::Invocable;
 use to_args::ToArgs;
 
 #[derive(Parser, Arbitrary, PartialEq, Debug)]
@@ -33,15 +33,6 @@ impl ToArgs for Cli {
     }
 }
 
-impl Invocable for Cli {
-    fn executable(&self) -> std::path::PathBuf {
-        std::env::current_exe().expect("Failed to get current executable path")
-    }
-
-    fn args(&self) -> Vec<OsString> {
-        self.to_args()
-    }
-}
 
 #[cfg(test)]
 mod tests {

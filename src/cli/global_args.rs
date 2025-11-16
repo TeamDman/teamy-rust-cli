@@ -2,6 +2,7 @@ use arbitrary::Arbitrary;
 use clap::Args;
 use std::ffi::OsString;
 
+use crate::cli::json_log_behaviour::JsonLogBehaviour;
 use crate::cli::to_args::ToArgs;
 
 #[derive(Args, Default, Arbitrary, PartialEq, Debug)]
@@ -10,9 +11,17 @@ pub struct GlobalArgs {
     #[clap(long, global = true)]
     pub debug: bool,
 
-    /// Console PID for console reuse (hidden)
-    #[clap(long, hide = true, global = true)]
-    pub console_pid: Option<u32>,
+    /// Emit structured JSON logs alongside stderr output.
+    /// Optionally specify a filename; if not provided, a timestamped filename will be generated.
+    #[clap(
+        long,
+        global = true,
+        value_name = "FILE",
+        num_args = 0..=1,
+        default_missing_value = "",
+        require_equals = false
+    )]
+    json: Option<String>,
 }
 
 impl GlobalArgs {
@@ -23,6 +32,15 @@ impl GlobalArgs {
             tracing::Level::INFO
         }
     }
+
+    /// Get the JSON log behaviour based on the --json argument.
+    pub fn json_log_behaviour(&self) -> JsonLogBehaviour {
+        match &self.json {
+            None => JsonLogBehaviour::None,
+            Some(s) if s.is_empty() => JsonLogBehaviour::SomeAutomaticPath,
+            Some(s) => JsonLogBehaviour::Some(s.into()),
+        }
+    }
 }
 
 impl ToArgs for GlobalArgs {
@@ -31,9 +49,15 @@ impl ToArgs for GlobalArgs {
         if self.debug {
             args.push("--debug".into());
         }
-        if let Some(pid) = self.console_pid {
-            args.push("--console-pid".into());
-            args.push(pid.to_string().into());
+        match &self.json {
+            None => {}
+            Some(s) if s.is_empty() => {
+                args.push("--json".into());
+            }
+            Some(path) => {
+                args.push("--json".into());
+                args.push(path.into());
+            }
         }
         args
     }
