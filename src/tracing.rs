@@ -31,6 +31,11 @@ pub fn init_tracing(
         .without_time();
 
     if let Some(json_log_path) = json_behaviour.get_path() {
+        // Create parent directories if they don't exist
+        if let Some(parent) = json_log_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
         let file = File::create(json_log_path.as_ref())?;
         let file = Arc::new(Mutex::new(file));
         let json_writer = {
@@ -51,18 +56,30 @@ pub fn init_tracing(
             .with_line_number(true)
             .with_writer(json_writer);
 
-        tracing_subscriber::registry()
+        if let Err(error) = tracing_subscriber::registry()
             .with(env_filter)
             .with(stderr_layer)
             .with(json_layer)
-            .try_init()?;
+            .try_init()
+        {
+            eprintln!(
+                "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
+            );
+            return Ok(());
+        }
 
         info!(?json_log_path, "JSON log output initialized");
     } else {
-        tracing_subscriber::registry()
+        if let Err(error) = tracing_subscriber::registry()
             .with(env_filter)
             .with(stderr_layer)
-            .try_init()?;
+            .try_init()
+        {
+            eprintln!(
+                "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
+            );
+            return Ok(());
+        }
     }
 
     Ok(())
