@@ -17,12 +17,6 @@ The `tracing` and `tracing-subscriber` crates are used for logging. Passing `--d
 
 The tracing-subscriber configuration changes depending if it's a release or debug build.
 
-### Elevation
-
-By having the `ToArgs` trait implemented for our commands, we can easily relaunch the program when detected in an unelevated state.
-
-The console handle is reused when relaunching to ensure that output goes to the terminal that the user expects, with the unelevated process exiting after the elevated one to ensure the console behaves as desired.
-
 ### Error handling
 
 The `eyre` and `color-eyre` crates are used for handling error cases.
