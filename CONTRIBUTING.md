@@ -31,20 +31,28 @@ Commands are organized hierarchically with a consistent naming and file structur
 
 Each layer implements `invoke()` for execution logic and `ToArgs` for serialization. All argument structs derive `clap::Args` or `clap::Subcommand`, `arbitrary::Arbitrary`, `PartialEq`, and `Debug`.
 
-**Example structure**:
+Command line structure is fuzz-tested by [tests/cli_fuzzing.rs](./tests/cli_fuzzing.rs).
+
+## Expected structure
+
 ```
 src/cli/command/
-  model/
+  model/ # a demonstrative subcommand, this is a placeholder noun for whatever subcommands other projects may have
     mod.rs              # ModelArgs (clap::Args) + ModelCommand enum
     model_command.rs    # ModelCommand (clap::Subcommand)
     model_list_command.rs
     model_train_command.rs
-    kind/
+    kind/ # a demonstrative nested subcommand, this is a placeholder noun for whatever subcommands other projects may have
       mod.rs            # ModelKindArgs (clap::Args) + ModelKindCommand enum
       model_kind_command.rs
       model_kind_list_command.rs
+tests/
+  cli_fuzzing.rs
+CONTRIBUTING.md # a copy of this file
+rustfmt.toml
+README.md
+Cargo.toml
+Cargo.lock
+.gitignore
 ```
 
-Command line structure is fuzz-tested by [tests/cli_fuzzing.rs](./tests/cli_fuzzing.rs).
-
-## This CONTRIBUTING.md document should be copied to repos using this repo as a template.
