@@ -45,4 +45,6 @@ src/cli/command/
       model_kind_list_command.rs
 ```
 
-## This CONTRIBUTING.md document should be copied to the repos using this template, sans this line.
+Command line structure is fuzz-tested by [tests/cli_fuzzing.rs](./tests/cli_fuzzing.rs).
+
+## This CONTRIBUTING.md document should be copied to repos using this repo as a template.
