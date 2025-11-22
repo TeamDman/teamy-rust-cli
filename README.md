@@ -30,3 +30,7 @@ These crates should be used when adding additional behaviour to save time instea
 | chrono | Datetime utilities with timezones for UTC and Local |
 | cloud_terrastodon_user_input | TUI/CLI input helpers like picklists |
 | serde_json | Derive macros for json serialization and deserialization, requires serde |
+
+## Dear AI Reader
+
+Please read CONTRIBUTING.md to learn more about the preference of the author.
