@@ -56,3 +56,100 @@ Cargo.lock
 .gitignore
 ```
 
+## Refactoring Guide
+
+When restructuring existing CLI commands into the standard pattern, follow these steps:
+
+### 1. Plan the File Structure
+
+Before making changes, document the expected file tree. For each command:
+- Commands with subcommands need: `{name}_args.rs`, `{name}_command.rs`, and per-variant `{name}_{variant}_args.rs` files
+- Simple commands (no subcommands) need only: `{name}_args.rs`
+- All commands need a `mod.rs` that re-exports the primary types
+
+Example planning document:
+```markdown
+After refactor:
+src/cli/command/
+  mod.rs
+  command.rs          # Top-level Command enum
+  host/
+    mod.rs            # Re-exports HostCommand
+    host_args.rs      # Wrapper struct with #[command(subcommand)]
+    host_command.rs   # HostCommand enum
+    host_add_args.rs
+    host_remove_args.rs
+    host_list_args.rs
+```
+
+### 2. Create the Module Structure
+
+For each command with subcommands:
+
+**{name}/mod.rs** - Re-export pattern:
+```rust
+pub mod {name}_args;
+pub mod {name}_command;
+pub mod {name}_{variant1}_args;
+pub mod {name}_{variant2}_args;
+
+pub use {name}_command::{Name}Command;
+```
+
+**{name}/{name}_command.rs** - Command enum:
+```rust
+#[derive(Debug, Subcommand)]
+pub enum {Name}Command {
+    Variant1({Name}Variant1Args),
+    Variant2({Name}Variant2Args),
+}
+
+impl {Name}Command {
+    pub fn invoke(self, /* params */) -> eyre::Result<()> {
+        match self {
+            Self::Variant1(args) => args.invoke(/* params */),
+            Self::Variant2(args) => args.invoke(/* params */),
+        }
+    }
+}
+```
+
+**{name}/{name}_{variant}_args.rs** - Leaf command:
+```rust
+#[derive(Debug, Args)]
+pub struct {Name}{Variant}Args {
+    // fields
+}
+
+impl {Name}{Variant}Args {
+    pub fn invoke(self, /* params */) -> eyre::Result<()> {
+        // implementation
+    }
+}
+```
+
+### 3. Wire Up the Top-Level Command
+
+In `command.rs`, import and use the command enum (not the args wrapper):
+```rust
+use crate::cli::command::host::host_command::HostCommand;
+
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    #[command(subcommand)]
+    Host(HostCommand),
+}
+```
+
+### 4. Migration Checklist
+
+- [ ] Document expected file structure before coding
+- [ ] Create all `*_command.rs` files for enums with subcommands
+- [ ] Create all `*_args.rs` files for leaf command implementations
+- [ ] Move `invoke()` logic from command enums to individual args files
+- [ ] Update `mod.rs` to re-export command enums (not args wrappers)
+- [ ] Update parent `command.rs` to use command enums directly
+- [ ] Run `cargo build` to verify compilation
+- [ ] Test each command variant to ensure behavior is preserved
+- [ ] Run `cargo fmt`
+
