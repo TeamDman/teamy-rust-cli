@@ -21,7 +21,7 @@ pub struct GlobalArgs {
         default_missing_value = "",
         require_equals = false
     )]
-    json: Option<String>,
+    log_file: Option<String>,
 }
 
 impl GlobalArgs {
@@ -35,7 +35,7 @@ impl GlobalArgs {
 
     /// Get the JSON log behaviour based on the --json argument.
     pub fn json_log_behaviour(&self) -> JsonLogBehaviour {
-        match &self.json {
+        match &self.log_file {
             None => JsonLogBehaviour::None,
             Some(s) if s.is_empty() => JsonLogBehaviour::SomeAutomaticPath,
             Some(s) => JsonLogBehaviour::Some(s.into()),
@@ -49,13 +49,13 @@ impl ToArgs for GlobalArgs {
         if self.debug {
             args.push("--debug".into());
         }
-        match &self.json {
+        match &self.log_file {
             None => {}
             Some(s) if s.is_empty() => {
-                args.push("--json".into());
+                args.push("--log-file".into());
             }
             Some(path) => {
-                args.push("--json".into());
+                args.push("--log-file".into());
                 args.push(path.into());
             }
         }
