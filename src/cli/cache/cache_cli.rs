@@ -1,5 +1,6 @@
 use crate::cli::ToArgs;
 use crate::cli::cache::clean::CacheCleanArgs;
+use crate::cli::cache::path::CachePathArgs;
 use arbitrary::Arbitrary;
 use clap::Args;
 use clap::Subcommand;
@@ -15,12 +16,14 @@ pub struct CacheArgs {
 #[derive(Subcommand, Debug, Clone, Arbitrary, PartialEq)]
 pub enum CacheCommand {
     Clean(CacheCleanArgs),
+    Path(CachePathArgs),
 }
 
 impl CacheArgs {
     pub async fn invoke(self) -> Result<()> {
         match self.command {
             CacheCommand::Clean(args) => args.invoke().await?,
+            CacheCommand::Path(args) => args.invoke().await?,
         }
 
         Ok(())
@@ -34,6 +37,10 @@ impl ToArgs for CacheArgs {
             CacheCommand::Clean(clean_args) => {
                 args.push("clean".into());
                 args.extend(clean_args.to_args());
+            }
+            CacheCommand::Path(path_args) => {
+                args.push("path".into());
+                args.extend(path_args.to_args());
             }
         }
         args

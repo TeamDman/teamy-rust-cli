@@ -1,0 +1,22 @@
+use arbitrary::Arbitrary;
+use clap::Args;
+use eyre::Result;
+
+use crate::cli::ToArgs;
+
+/// Show the cache path.
+#[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
+pub struct CachePathShowArgs {}
+
+impl CachePathShowArgs {
+    pub async fn invoke(self) -> Result<()> {
+        println!("{}", crate::paths::CACHE_DIR.display());
+        Ok(())
+    }
+}
+
+impl ToArgs for CachePathShowArgs {
+    fn to_args(&self) -> Vec<std::ffi::OsString> {
+        Vec::new()
+    }
+}

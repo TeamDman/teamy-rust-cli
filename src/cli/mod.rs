@@ -1,7 +1,9 @@
 pub mod cache;
+pub mod home;
 mod global_args;
 
 use crate::cli::cache::CacheArgs;
+use crate::cli::home::HomeArgs;
 use arbitrary::Arbitrary;
 use clap::Parser;
 use clap::Subcommand;
@@ -43,12 +45,15 @@ impl ToArgs for Cli {
 pub enum Command {
     /// Hello-world demonstration commands
     Cache(CacheArgs),
+    /// Home-related commands
+    Home(HomeArgs),
 }
 
 impl Command {
     pub async fn invoke(self) -> eyre::Result<()> {
         match self {
             Command::Cache(args) => args.invoke().await,
+            Command::Home(args) => args.invoke().await,
         }
     }
 }
@@ -60,6 +65,10 @@ impl ToArgs for Command {
             Command::Cache(cache_args) => {
                 args.push("cache".into());
                 args.extend(cache_args.to_args());
+            }
+            Command::Home(home_args) => {
+                args.push("home".into());
+                args.extend(home_args.to_args());
             }
         }
         args
