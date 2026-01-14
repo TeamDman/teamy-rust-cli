@@ -18,6 +18,9 @@ pub enum HomePathCommand {
 }
 
 impl HomePathArgs {
+    /// # Errors
+    ///
+    /// This function will return an error if the subcommand fails.
     pub async fn invoke(self) -> Result<()> {
         match self.command {
             HomePathCommand::Show(args) => args.invoke().await?,

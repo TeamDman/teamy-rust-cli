@@ -1,0 +1,6 @@
+# Disallow specific standard library methods across the crate.
+# See: https://doc.rust-lang.org/nightly/clippy/lint_configuration.html#disallowed_methods
+
+disallowed-methods = [
+  { path = "std::env::set_var", reason = "Avoid setting global environment variables; use helpers (tempfile/TempEnv) or design APIs that accept configuration explicitly" },
+]

@@ -54,3 +54,4 @@ multiple_crate_versions = "allow" # turn this off periodically to see how bad it
 # nursery = { level = "warn", priority = -1 }  # optional, might cause more false positives
 multiple_unsafe_ops_per_block = "deny"
 module_inception = "allow"
+allow_attributes = "deny"

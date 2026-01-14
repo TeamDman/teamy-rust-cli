@@ -21,6 +21,9 @@ pub struct Cli {
 }
 
 impl Cli {
+    /// # Errors
+    ///
+    /// This function will return an error if the tokio runtime cannot be built or if the command fails.
     pub fn invoke(self) -> eyre::Result<()> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -50,6 +53,9 @@ pub enum Command {
 }
 
 impl Command {
+    /// # Errors
+    ///
+    /// This function will return an error if the subcommand fails.
     pub async fn invoke(self) -> eyre::Result<()> {
         match self {
             Command::Cache(args) => args.invoke().await,

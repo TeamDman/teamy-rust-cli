@@ -1,3 +1,6 @@
+#![deny(clippy::disallowed_methods)]
+#![deny(clippy::disallowed_macros)]
+
 pub mod cli;
 pub mod logging;
 pub mod paths;
@@ -7,6 +10,10 @@ use clap::CommandFactory;
 use clap::FromArgMatches;
 
 // Entrypoint for the program to reduce coupling to the name of this crate.
+///
+/// # Errors
+///
+/// This function will return an error if `color_eyre` installation, CLI parsing, logging initialization, or command execution fails.
 pub fn main() -> eyre::Result<()> {
     // Install color_eyre for better error reports
     color_eyre::install()?;

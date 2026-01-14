@@ -18,6 +18,9 @@ pub enum CachePathCommand {
 }
 
 impl CachePathArgs {
+    /// # Errors
+    ///
+    /// This function will return an error if the subcommand fails.
     pub async fn invoke(self) -> Result<()> {
         match self.command {
             CachePathCommand::Show(args) => args.invoke().await?,

@@ -8,6 +8,15 @@ use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::util::SubscriberInitExt;
 
+/// Initialize logging based on the provided configuration.
+///
+/// # Errors
+///
+/// This function will return an error if creating the log file or directories fails.
+///
+/// # Panics
+///
+/// This function may panic if locking or cloning the log file handle fails.
 pub fn init_logging(config: &LoggingConfig) -> eyre::Result<()> {
     let env_filter_layer = EnvFilter::builder()
         .with_default_directive(config.default_directive.clone())
@@ -60,17 +69,15 @@ pub fn init_logging(config: &LoggingConfig) -> eyre::Result<()> {
         }
 
         info!(?json_log_path, "JSON log output initialized");
-    } else {
-        if let Err(error) = tracing_subscriber::registry()
-            .with(env_filter_layer)
-            .with(stderr_layer)
-            .try_init()
-        {
-            eprintln!(
-                "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
-            );
-            return Ok(());
-        }
+    } else if let Err(error) = tracing_subscriber::registry()
+        .with(env_filter_layer)
+        .with(stderr_layer)
+        .try_init()
+    {
+        eprintln!(
+            "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
+        );
+        return Ok(());
     }
     Ok(())
 }

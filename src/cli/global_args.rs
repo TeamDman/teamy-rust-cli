@@ -25,6 +25,9 @@ pub struct GlobalArgs {
 }
 
 impl GlobalArgs {
+    /// # Errors
+    ///
+    /// This function will return an error if the log filter string is invalid.
     pub fn logging_config(&self) -> eyre::Result<LoggingConfig> {
         Ok(LoggingConfig {
             default_directive: match (self.debug, &self.log_filter) {
@@ -37,7 +40,7 @@ impl GlobalArgs {
                 None => None,
                 Some(path) if path.is_dir() => {
                     let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
-                    let filename = format!("log_{}.ndjson", timestamp);
+                    let filename = format!("log_{timestamp}.ndjson");
                     Some(path.join(filename))
                 }
                 Some(path) => Some(path.clone()),

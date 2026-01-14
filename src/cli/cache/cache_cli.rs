@@ -20,6 +20,9 @@ pub enum CacheCommand {
 }
 
 impl CacheArgs {
+    /// # Errors
+    ///
+    /// This function will return an error if the subcommand fails.
     pub async fn invoke(self) -> Result<()> {
         match self.command {
             CacheCommand::Clean(args) => args.invoke().await?,
