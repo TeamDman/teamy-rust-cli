@@ -1,10 +1,9 @@
+use crate::cli::ToArgs;
+use crate::cli::cache::path::show::CachePathShowArgs;
 use arbitrary::Arbitrary;
 use clap::Args;
 use clap::Subcommand;
 use eyre::Result;
-
-use crate::cli::ToArgs;
-use crate::cli::cache::path::show::CachePathShowArgs;
 
 /// Cache path commands.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]

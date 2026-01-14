@@ -1,8 +1,7 @@
+use crate::cli::ToArgs;
 use arbitrary::Arbitrary;
 use clap::Args;
 use eyre::Result;
-
-use crate::cli::ToArgs;
 
 /// Show the home path.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]

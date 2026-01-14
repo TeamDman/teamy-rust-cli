@@ -1,8 +1,7 @@
+use crate::cli::ToArgs;
 use arbitrary::Arbitrary;
 use clap::Args;
 use eyre::Result;
-
-use crate::cli::ToArgs;
 
 /// Delete the cache files.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]

@@ -1,10 +1,9 @@
+use crate::cli::ToArgs;
+use crate::cli::home::path::show::HomePathShowArgs;
 use arbitrary::Arbitrary;
 use clap::Args;
 use clap::Subcommand;
 use eyre::Result;
-
-use crate::cli::ToArgs;
-use crate::cli::home::path::show::HomePathShowArgs;
 
 /// Home path commands.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]

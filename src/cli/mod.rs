@@ -1,6 +1,6 @@
 pub mod cache;
-pub mod home;
 mod global_args;
+pub mod home;
 
 use crate::cli::cache::CacheArgs;
 use crate::cli::home::HomeArgs;
