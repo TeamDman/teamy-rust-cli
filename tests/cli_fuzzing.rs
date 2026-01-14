@@ -1,7 +1,7 @@
 use arbitrary::Arbitrary;
 use clap::Parser;
-use teamy_rust_cli::cli::to_args::ToArgs;
 use teamy_rust_cli::cli::Cli;
+use teamy_rust_cli::cli::ToArgs;
 
 #[test]
 fn fuzz_cli_args_roundtrip() {

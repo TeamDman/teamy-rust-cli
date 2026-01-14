@@ -1,27 +1,18 @@
-use chrono::Local;
-use eyre::Result;
+use crate::logging::logging_config::LoggingConfig;
 use std::fs::File;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
-pub use tracing::Level;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::filter::Directive;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use crate::cli::json_log_behaviour::JsonLogBehaviour;
-
-pub fn init_tracing(
-    level: impl Into<Directive>,
-    json_behaviour: JsonLogBehaviour,
-) -> Result<()> {
-    let default_directive: Directive = level.into();
-    let env_filter = EnvFilter::builder()
-        .with_default_directive(default_directive.clone())
+pub fn init_logging(config: &LoggingConfig) -> eyre::Result<()> {
+    let env_filter_layer = EnvFilter::builder()
+        .with_default_directive(config.default_directive.clone())
         .from_env_lossy();
+
     let stderr_layer = tracing_subscriber::fmt::layer()
         .with_file(cfg!(debug_assertions))
         .with_target(true)
@@ -30,13 +21,13 @@ pub fn init_tracing(
         .pretty()
         .without_time();
 
-    if let Some(json_log_path) = json_behaviour.get_path() {
+    if let Some(json_log_path) = config.json_log_path.as_ref() {
         // Create parent directories if they don't exist
         if let Some(parent) = json_log_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
-        let file = File::create(json_log_path.as_ref())?;
+
+        let file = File::create(json_log_path)?;
         let file = Arc::new(Mutex::new(file));
         let json_writer = {
             let file = Arc::clone(&file);
@@ -57,7 +48,7 @@ pub fn init_tracing(
             .with_writer(json_writer);
 
         if let Err(error) = tracing_subscriber::registry()
-            .with(env_filter)
+            .with(env_filter_layer)
             .with(stderr_layer)
             .with(json_layer)
             .try_init()
@@ -71,7 +62,7 @@ pub fn init_tracing(
         info!(?json_log_path, "JSON log output initialized");
     } else {
         if let Err(error) = tracing_subscriber::registry()
-            .with(env_filter)
+            .with(env_filter_layer)
             .with(stderr_layer)
             .try_init()
         {
@@ -81,12 +72,5 @@ pub fn init_tracing(
             return Ok(());
         }
     }
-
     Ok(())
-}
-
-/// Generate a default JSON log filename with timestamp
-pub fn default_json_log_path() -> PathBuf {
-    let timestamp = Local::now().format("%Y-%m-%d_%Hh%Mm%Ss");
-    PathBuf::from(format!("teamy_rust_cli_log_{}.jsonl", timestamp))
 }
