@@ -5,7 +5,7 @@ use eyre::Result;
 
 /// Delete the cache files.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
-pub struct CacheCleanArgs {}
+pub struct CacheCleanArgs;
 
 impl CacheCleanArgs {
     /// # Errors

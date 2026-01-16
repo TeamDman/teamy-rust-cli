@@ -5,7 +5,7 @@ use eyre::Result;
 
 /// Show the home path.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
-pub struct HomePathShowArgs {}
+pub struct HomePathShowArgs;
 
 impl HomePathShowArgs {
     /// # Errors

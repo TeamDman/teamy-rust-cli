@@ -5,7 +5,7 @@ use eyre::Result;
 
 /// Show the cache path.
 #[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
-pub struct CachePathShowArgs {}
+pub struct CachePathShowArgs;
 
 impl CachePathShowArgs {
     /// # Errors

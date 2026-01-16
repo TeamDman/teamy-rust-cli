@@ -24,13 +24,7 @@ fn add_git_revision() {
         .args(["rev-parse", "--short", "HEAD"])
         .output()
         .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                Some(o.stdout)
-            } else {
-                None
-            }
-        })
+        .and_then(|o| o.status.success().then_some(o.stdout))
         .and_then(|v| String::from_utf8(v).ok())
         .map_or_else(|| "unknown".to_string(), |s| s.trim().to_string());
 
