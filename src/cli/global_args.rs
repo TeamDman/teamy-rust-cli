@@ -11,15 +11,18 @@ use tracing::level_filters::LevelFilter;
 #[derive(Args, Default, Arbitrary, PartialEq, Debug)]
 pub struct GlobalArgs {
     /// Enable debug logging, including backtraces on panics.
+    // r[core.cli.global.debug]
     #[arg(long, global = true, default_value_t = false)]
     pub debug: bool,
 
     /// Log level filter directive.
+    // r[core.cli.global.log_filter]
     #[arg(long, global = true, value_name = "DIRECTIVE")]
     pub log_filter: Option<String>,
 
     /// Write structured ndjson logs to this file or directory. If a directory is provided,
     /// a filename will be generated there. If omitted, no JSON log file will be written.
+    // r[core.cli.global.log_file]
     #[arg(long, global = true, value_name = "FILE|DIR")]
     pub log_file: Option<PathBuf>,
 }

@@ -1,0 +1,26 @@
+// Tracey configuration for voice3text
+
+specs (
+    {
+        name cli
+        prefix r
+        include (docs/content/spec-cli/**/*.md)
+        impls (
+            {
+                name rust
+                include (
+                    //src/**/*.rs
+                    //build.rs
+                    //resources/*.manifest
+                    //resources/*.rc
+                    //resources/**/*.*
+                    resources/app.rc
+                    clippy.toml
+                )
+                exclude (
+                    target/**
+                )
+            }
+        )
+    }
+)

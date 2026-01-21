@@ -11,6 +11,8 @@ use eyre::Context;
 pub use global_args::*;
 use std::ffi::OsString;
 
+// r[core.cli.impl.dep.parser]
+// r[core.cli.version]
 #[derive(Parser, Arbitrary, PartialEq, Debug)]
 #[clap(version)]
 pub struct Cli {
@@ -25,6 +27,7 @@ impl Cli {
     ///
     /// This function will return an error if the tokio runtime cannot be built or if the command fails.
     pub fn invoke(self) -> eyre::Result<()> {
+        // r[core.cli.async]
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -47,8 +50,10 @@ impl ToArgs for Cli {
 #[derive(Subcommand, Arbitrary, PartialEq, Debug)]
 pub enum Command {
     /// Hello-world demonstration commands
+    // r[core.cli.subcommand.cache]
     Cache(CacheArgs),
     /// Home-related commands
+    // r[core.cli.subcommand.home]
     Home(HomeArgs),
 }
 

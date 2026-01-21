@@ -7,8 +7,10 @@ fn main() {
 
 /// Embeds Windows resources (like application icon) into the executable.
 fn add_exe_resources() {
+    // r[core.bin.resource.organization]
     println!("cargo:rerun-if-changed=resources");
 
+    // r[core.bin.resource.rc]
     embed_resource::compile("resources/app.rc", embed_resource::NONE)
         .manifest_required()
         .expect("failed to embed resources");
@@ -19,6 +21,7 @@ fn add_exe_resources() {
 /// let git_rev = option_env!("GIT_REVISION").unwrap_or("unknown");
 /// ```
 fn add_git_revision() {
+    // r[core.bin.git_rev]
     // Try to get a short git revision; on failure, set to "unknown".
     let rev = Command::new("git")
         .args(["rev-parse", "--short", "HEAD"])

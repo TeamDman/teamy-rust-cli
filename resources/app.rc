@@ -1,3 +1,9 @@
+// https://learn.microsoft.com/en-us/windows/win32/menurc/about-resource-files
+
 #define RT_MANIFEST 24
+
+// r[impl core.bin.resource.manifest]
 1 RT_MANIFEST "app.manifest"
+
+// r[core.bin.icon]
 main_icon ICON "main.ico"

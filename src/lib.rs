@@ -1,3 +1,4 @@
+// r[core.quality.lints.disallowed]
 #![deny(clippy::disallowed_methods)]
 #![deny(clippy::disallowed_macros)]
 
@@ -15,6 +16,7 @@ use clap::FromArgMatches;
 ///
 /// This function will return an error if `color_eyre` installation, CLI parsing, logging initialization, or command execution fails.
 pub fn main() -> eyre::Result<()> {
+    // r[core.quality.errors]
     // Install color_eyre for better error reports
     color_eyre::install()?;
 
@@ -22,15 +24,18 @@ pub fn main() -> eyre::Result<()> {
     let cli = Cli::command();
     let cli = Cli::from_arg_matches(&cli.get_matches())?;
 
+    // r[core.log.init]
     // Initialize logging
     logging::init_logging(&cli.global_args.logging_config()?)?;
 
     #[cfg(windows)]
     {
+        // r[core.log.ansi]
         // Enable ANSI support on Windows
         // This fails in a pipe scenario, so we ignore the error
         let _ = teamy_windows::console::enable_ansi_support();
 
+        // r[core.log.win.utf8_check]
         // Warn if UTF-8 is not enabled on Windows
         #[cfg(windows)]
         teamy_windows::string::warn_if_utf8_not_enabled();

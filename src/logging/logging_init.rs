@@ -48,6 +48,7 @@ pub fn init_logging(config: &LoggingConfig) -> eyre::Result<()> {
             })
         };
 
+        // r[core.log.encoding.json]
         let json_format = tracing_subscriber::fmt::format().json();
         let json_layer = tracing_subscriber::fmt::layer()
             .event_format(json_format)

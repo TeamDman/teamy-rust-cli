@@ -3,6 +3,7 @@ use clap::Parser;
 use teamy_rust_cli::cli::Cli;
 use teamy_rust_cli::cli::ToArgs;
 
+// r[core.quality.test.roundtrip]
 #[test]
 fn fuzz_cli_args_roundtrip() {
     // Generate 100 arbitrary CLI instances and test roundtrip conversion
