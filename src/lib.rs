@@ -41,7 +41,7 @@ pub fn main() -> eyre::Result<()> {
     .unwrap();
 
     // Initialize logging
-    logging::init_logging(&cli.logging_config()?)?;
+    logging::init_logging(&cli.global.logging_config()?)?;
 
     #[cfg(windows)]
     {
