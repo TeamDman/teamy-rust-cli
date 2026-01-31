@@ -1,10 +1,13 @@
+use crate::cli::ToArgs;
 use crate::cli::cache::path::show::CachePathShowArgs;
+use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
 use figue as args;
+use std::ffi::OsString;
 
 /// Cache path commands.
-#[derive(Facet, Debug)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 pub struct CachePathArgs {
     /// The cache path subcommand to run.
     #[facet(args::subcommand)]
@@ -12,7 +15,7 @@ pub struct CachePathArgs {
 }
 
 /// Cache path subcommands.
-#[derive(Facet, Debug)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 #[repr(u8)]
 pub enum CachePathCommand {
     /// Show the cache path.
@@ -29,5 +32,18 @@ impl CachePathArgs {
         }
 
         Ok(())
+    }
+}
+
+impl ToArgs for CachePathArgs {
+    fn to_args(&self) -> Vec<OsString> {
+        let mut args = Vec::new();
+        match &self.command {
+            CachePathCommand::Show(show_args) => {
+                args.push("show".into());
+                args.extend(show_args.to_args());
+            }
+        }
+        args
     }
 }

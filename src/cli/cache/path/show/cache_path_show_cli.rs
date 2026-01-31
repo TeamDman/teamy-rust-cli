@@ -1,8 +1,10 @@
+use crate::cli::ToArgs;
+use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
 
 /// Show the cache path.
-#[derive(Facet, Debug)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 pub struct CachePathShowArgs;
 
 impl CachePathShowArgs {
@@ -15,3 +17,5 @@ impl CachePathShowArgs {
         Ok(())
     }
 }
+
+impl ToArgs for CachePathShowArgs {}

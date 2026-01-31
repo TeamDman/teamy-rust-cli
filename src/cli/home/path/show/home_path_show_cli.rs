@@ -1,8 +1,10 @@
+use crate::cli::ToArgs;
+use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
 
 /// Show the home path.
-#[derive(Facet, Debug)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 pub struct HomePathShowArgs;
 
 impl HomePathShowArgs {
@@ -15,3 +17,5 @@ impl HomePathShowArgs {
         Ok(())
     }
 }
+
+impl ToArgs for HomePathShowArgs {}

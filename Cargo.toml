@@ -12,6 +12,7 @@ categories = ["command-line-utilities"]
 documentation = "https://github.com/TeamDman/teamy-rust-cli" # "https://docs.rs/crate/abc"
 
 [dependencies]
+arbitrary = { version = "1.4.1", features = ["derive"] }
 chrono = "0.4"
 color-eyre = "0.6.5"
 eyre = "0.6.12"

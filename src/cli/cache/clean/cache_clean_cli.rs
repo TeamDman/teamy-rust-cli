@@ -1,8 +1,10 @@
+use crate::cli::ToArgs;
+use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
 
 /// Delete the cache files.
-#[derive(Facet, Debug)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 pub struct CacheCleanArgs;
 
 impl CacheCleanArgs {
@@ -14,3 +16,5 @@ impl CacheCleanArgs {
         Ok(())
     }
 }
+
+impl ToArgs for CacheCleanArgs {}

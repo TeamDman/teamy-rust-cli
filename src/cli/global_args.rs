@@ -1,15 +1,18 @@
 //! Global arguments that apply to all commands.
 
+use crate::cli::ToArgs;
 use crate::logging::LoggingConfig;
+use arbitrary::Arbitrary;
 use chrono::Local;
 use facet::Facet;
 use figue::{self as args};
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::level_filters::LevelFilter;
 
 /// Global arguments that apply to all commands.
-#[derive(Facet, Debug, Default)]
+#[derive(Facet, Arbitrary, Debug, Default, PartialEq)]
 pub struct GlobalArgs {
     /// Enable debug logging, including backtraces on panics.
     #[facet(args::named, default)]
@@ -48,5 +51,23 @@ impl GlobalArgs {
                 Some(path) => Some(path.clone()),
             },
         })
+    }
+}
+
+impl ToArgs for GlobalArgs {
+    fn to_args(&self) -> Vec<OsString> {
+        let mut args = Vec::new();
+        if self.debug {
+            args.push("--debug".into());
+        }
+        if let Some(filter) = &self.log_filter {
+            args.push("--log-filter".into());
+            args.push(filter.into());
+        }
+        if let Some(path) = &self.log_file {
+            args.push("--log-file".into());
+            args.push(path.as_os_str().into());
+        }
+        args
     }
 }
