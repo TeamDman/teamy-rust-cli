@@ -12,15 +12,15 @@ categories = ["command-line-utilities"]
 documentation = "https://github.com/TeamDman/teamy-rust-cli" # "https://docs.rs/crate/abc"
 
 [dependencies]
-arbitrary = { version = "1.4.1", features = ["derive"] }
 chrono = "0.4"
-clap = { version = "4.5.43", features = ["derive"] }
 color-eyre = "0.6.5"
 eyre = "0.6.12"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
+facet = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+figue = { git = "https://github.com/bearcove/figue", branch = "main" }
 
 [target.'cfg(windows)'.dependencies]
 teamy-windows = "0.9.0"
@@ -55,7 +55,7 @@ as_pointer_underscore = "warn"
 assertions_on_result_states = "warn"
 clone_on_ref_ptr = "warn"
 deref_by_slicing = "warn"
-disallowed_script_idents = "warn"
+disallowed_script_idents = "allow" # facet macros use Unicode identifiers
 empty_drop = "warn"
 empty_enum_variants_with_brackets = "warn"
 empty_structs_with_brackets = "warn"

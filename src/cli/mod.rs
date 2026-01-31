@@ -4,19 +4,37 @@ pub mod home;
 
 use crate::cli::cache::CacheArgs;
 use crate::cli::home::HomeArgs;
-use arbitrary::Arbitrary;
-use clap::Parser;
-use clap::Subcommand;
+use crate::logging::LoggingConfig;
+use chrono::Local;
 use eyre::Context;
-pub use global_args::*;
-use std::ffi::OsString;
+use facet::Facet;
+use figue::FigueBuiltins;
+use figue::{self as args};
+use std::path::PathBuf;
+use std::str::FromStr;
+use tracing::level_filters::LevelFilter;
 
-#[derive(Parser, Arbitrary, PartialEq, Debug)]
-#[clap(version)]
+/// A demonstration command line utility.
+#[derive(Facet, Debug)]
 pub struct Cli {
-    #[clap(flatten)]
-    pub global_args: GlobalArgs,
-    #[clap(subcommand)]
+    /// Enable debug logging, including backtraces on panics.
+    #[facet(args::named, default)]
+    pub debug: bool,
+
+    /// Log level filter directive.
+    #[facet(args::named)]
+    pub log_filter: Option<String>,
+
+    /// Write structured ndjson logs to this file or directory.
+    #[facet(args::named)]
+    pub log_file: Option<PathBuf>,
+
+    /// Standard CLI options (help, version, completions).
+    #[facet(flatten)]
+    pub builtins: FigueBuiltins,
+
+    /// The command to run.
+    #[facet(args::subcommand)]
     pub command: Command,
 }
 
@@ -32,23 +50,40 @@ impl Cli {
         runtime.block_on(async move { self.command.invoke().await })?;
         Ok(())
     }
-}
 
-impl ToArgs for Cli {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        args.extend(self.global_args.to_args());
-        args.extend(self.command.to_args());
-        args
+    /// Get the logging configuration from CLI arguments.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the log filter string is invalid.
+    pub fn logging_config(&self) -> eyre::Result<LoggingConfig> {
+        Ok(LoggingConfig {
+            default_directive: match (self.debug, &self.log_filter) {
+                (true, _) => LevelFilter::DEBUG,
+                (false, Some(filter)) => LevelFilter::from_str(filter)?,
+                (false, None) => LevelFilter::INFO,
+            }
+            .into(),
+            json_log_path: match &self.log_file {
+                None => None,
+                Some(path) if path.is_dir() => {
+                    let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
+                    let filename = format!("log_{timestamp}.ndjson");
+                    Some(path.join(filename))
+                }
+                Some(path) => Some(path.clone()),
+            },
+        })
     }
 }
 
-/// A demonstration command line utility
-#[derive(Subcommand, Arbitrary, PartialEq, Debug)]
+/// A demonstration command line utility.
+#[derive(Facet, Debug)]
+#[repr(u8)]
 pub enum Command {
-    /// Hello-world demonstration commands
+    /// Cache-related commands.
     Cache(CacheArgs),
-    /// Home-related commands
+    /// Home-related commands.
     Home(HomeArgs),
 }
 
@@ -61,36 +96,5 @@ impl Command {
             Command::Cache(args) => args.invoke().await,
             Command::Home(args) => args.invoke().await,
         }
-    }
-}
-
-impl ToArgs for Command {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        match self {
-            Command::Cache(cache_args) => {
-                args.push("cache".into());
-                args.extend(cache_args.to_args());
-            }
-            Command::Home(home_args) => {
-                args.push("home".into());
-                args.extend(home_args.to_args());
-            }
-        }
-        args
-    }
-}
-
-/// Trait for converting CLI structures to command line arguments
-pub trait ToArgs {
-    fn to_args(&self) -> Vec<OsString> {
-        Vec::new()
-    }
-}
-
-// Blanket implementation for references
-impl<T: ToArgs> ToArgs for &T {
-    fn to_args(&self) -> Vec<OsString> {
-        (*self).to_args()
     }
 }

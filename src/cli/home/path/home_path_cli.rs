@@ -1,19 +1,21 @@
-use crate::cli::ToArgs;
 use crate::cli::home::path::show::HomePathShowArgs;
-use arbitrary::Arbitrary;
-use clap::Args;
-use clap::Subcommand;
 use eyre::Result;
+use facet::Facet;
+use figue as args;
 
 /// Home path commands.
-#[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
+#[derive(Facet, Debug)]
 pub struct HomePathArgs {
-    #[command(subcommand)]
+    /// The home path subcommand to run.
+    #[facet(args::subcommand)]
     pub command: HomePathCommand,
 }
 
-#[derive(Subcommand, Debug, Clone, Arbitrary, PartialEq)]
+/// Home path subcommands.
+#[derive(Facet, Debug)]
+#[repr(u8)]
 pub enum HomePathCommand {
+    /// Show the home path.
     Show(HomePathShowArgs),
 }
 
@@ -27,18 +29,5 @@ impl HomePathArgs {
         }
 
         Ok(())
-    }
-}
-
-impl ToArgs for HomePathArgs {
-    fn to_args(&self) -> Vec<std::ffi::OsString> {
-        let mut args = Vec::new();
-        match &self.command {
-            HomePathCommand::Show(show_args) => {
-                args.push("show".into());
-                args.extend(show_args.to_args());
-            }
-        }
-        args
     }
 }

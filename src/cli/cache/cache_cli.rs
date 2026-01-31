@@ -1,21 +1,24 @@
-use crate::cli::ToArgs;
 use crate::cli::cache::clean::CacheCleanArgs;
 use crate::cli::cache::path::CachePathArgs;
-use arbitrary::Arbitrary;
-use clap::Args;
-use clap::Subcommand;
 use eyre::Result;
+use facet::Facet;
+use figue as args;
 
 /// Cache-related commands.
-#[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
+#[derive(Facet, Debug)]
 pub struct CacheArgs {
-    #[command(subcommand)]
+    /// The cache subcommand to run.
+    #[facet(args::subcommand)]
     pub command: CacheCommand,
 }
 
-#[derive(Subcommand, Debug, Clone, Arbitrary, PartialEq)]
+/// Cache subcommands.
+#[derive(Facet, Debug)]
+#[repr(u8)]
 pub enum CacheCommand {
+    /// Clean the cache.
     Clean(CacheCleanArgs),
+    /// Show or manage cache paths.
     Path(CachePathArgs),
 }
 
@@ -30,22 +33,5 @@ impl CacheArgs {
         }
 
         Ok(())
-    }
-}
-
-impl ToArgs for CacheArgs {
-    fn to_args(&self) -> Vec<std::ffi::OsString> {
-        let mut args = Vec::new();
-        match &self.command {
-            CacheCommand::Clean(clean_args) => {
-                args.push("clean".into());
-                args.extend(clean_args.to_args());
-            }
-            CacheCommand::Path(path_args) => {
-                args.push("path".into());
-                args.extend(path_args.to_args());
-            }
-        }
-        args
     }
 }
