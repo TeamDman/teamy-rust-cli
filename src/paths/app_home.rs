@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 use tracing::warn;
 
 /// Cached `AppHome` instance
-/// This MUST NOT be used within functions outside of a top-level resolution function; any function relying on 
+/// This MUST NOT be used within functions outside of a top-level resolution function; any function relying on
 /// a [`AppHome`] must take it as a parameter to ensure testing is straightforward.
 pub static APP_HOME: LazyLock<AppHome> = LazyLock::new(|| match AppHome::resolve() {
     Ok(a) => a,

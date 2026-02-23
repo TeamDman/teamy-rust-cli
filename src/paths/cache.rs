@@ -6,7 +6,7 @@ use std::sync::LazyLock;
 use tracing::warn;
 
 /// The cache home directory for API responses.
-/// This MUST NOT be used within functions outside of a top-level resolution function; any function relying on 
+/// This MUST NOT be used within functions outside of a top-level resolution function; any function relying on
 /// a [`CacheHome`] must take it as a parameter to ensure testing is straightforward.
 pub static CACHE_DIR: LazyLock<CacheHome> = LazyLock::new(|| match CacheHome::resolve() {
     Ok(c) => c,
