@@ -110,7 +110,7 @@ pub(crate) fn help_invocation_hints(program_name: &str) -> Vec<String> {
     command_paths
         .into_iter()
         .filter(|path| !path.is_empty())
-        .map(|path| format!("{program_name} {} --help", path.join(" ")))
+    .map(|path| render_help_hint(program_name, &path))
         .collect()
 }
 
@@ -129,8 +129,21 @@ pub(crate) fn help_invocation_hints_at_level(
                 && path.starts_with(context_path)
                 && exclude_path != Some(path.as_slice())
         })
-        .map(|path| format!("{program_name} {} --help", path.join(" ")))
+        .map(|path| render_help_hint(program_name, &path))
         .collect()
+}
+
+fn render_help_hint(program_name: &str, path: &[String]) -> String {
+    let invocation = format!("{program_name} {} --help", path.join(" "));
+    match source_file_for_command_path(path) {
+        Some(source_file) => format!("{invocation}    [impl: {source_file}]"),
+        None => invocation,
+    }
+}
+
+#[must_use]
+pub(crate) fn help_implementation_source(path: &[String]) -> Option<&'static str> {
+    source_file_for_command_path(path)
 }
 
 #[derive(Clone, Debug)]
@@ -141,6 +154,7 @@ struct CommandBranch {
 
 #[derive(Clone, Debug, Default)]
 struct CommandNode {
+    source_file: Option<&'static str>,
     subcommands: Vec<CommandBranch>,
 }
 
@@ -195,7 +209,9 @@ fn to_kebab_case(name: &str) -> String {
 }
 
 fn node_from_shape(shape: &'static facet::Shape) -> CommandNode {
-    shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields)
+    let mut node = shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields);
+    node.source_file = shape.source_file;
+    node
 }
 
 fn node_from_variant(variant: &facet::Variant) -> CommandNode {
@@ -214,7 +230,11 @@ fn node_from_variant(variant: &facet::Variant) -> CommandNode {
     }
 
     if variant.data.fields.len() == 1 {
-        return node_from_shape(variant.data.fields[0].shape());
+        let mut node = node_from_shape(variant.data.fields[0].shape());
+        if node.source_file.is_none() {
+            node.source_file = variant.data.fields[0].shape().source_file;
+        }
+        return node;
     }
 
     CommandNode::default()
@@ -237,6 +257,21 @@ fn node_from_fields(fields: &'static [facet::Field]) -> CommandNode {
     }
 
     node
+}
+
+fn source_file_for_command_path(path: &[String]) -> Option<&'static str> {
+    let root = node_from_shape(Cli::SHAPE);
+    source_file_for_path_from_node(&root, path)
+}
+
+fn source_file_for_path_from_node(node: &CommandNode, path: &[String]) -> Option<&'static str> {
+    if path.is_empty() {
+        return node.source_file;
+    }
+
+    let (head, tail) = path.split_first()?;
+    let branch = node.subcommands.iter().find(|branch| branch.cli_name == *head)?;
+    source_file_for_path_from_node(&branch.node, tail)
 }
 
 fn collect_command_paths_with_prefixes(root: &CommandNode) -> Vec<Vec<String>> {

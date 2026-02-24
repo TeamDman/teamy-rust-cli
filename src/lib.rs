@@ -20,6 +20,8 @@ fn help_description(args: &[String]) -> String {
         .cloned()
         .collect::<Vec<_>>();
 
+    let current_impl = crate::cli::docs::help_implementation_source(&context_path);
+
     let hints = if has_subcommand {
         let mut level_hints = crate::cli::docs::help_invocation_hints_at_level(
             &program_name,
@@ -38,16 +40,30 @@ fn help_description(args: &[String]) -> String {
         crate::cli::docs::help_invocation_hints(&program_name)
     };
 
-    if hints.is_empty() {
+    if hints.is_empty() && current_impl.is_none() {
         return String::new();
     }
 
-    let mut description = String::from("More help:\n");
-    for hint in hints {
+    let mut description = String::new();
+    if let Some(path) = current_impl {
+        description.push_str("Implementation:\n");
         description.push_str("  ");
-        description.push_str(&hint);
+        description.push_str(path);
         description.push('\n');
     }
+
+    if !hints.is_empty() {
+        if !description.is_empty() {
+            description.push('\n');
+        }
+        description.push_str("More help:\n");
+        for hint in hints {
+            description.push_str("  ");
+            description.push_str(&hint);
+            description.push('\n');
+        }
+    }
+
     description.trim_end().to_owned()
 }
 
