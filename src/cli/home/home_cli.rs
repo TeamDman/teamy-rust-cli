@@ -1,5 +1,5 @@
 use crate::cli::ToArgs;
-use crate::cli::home::path::HomePathArgs;
+use crate::cli::home::show::HomeShowArgs;
 use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
@@ -18,8 +18,8 @@ pub struct HomeArgs {
 #[derive(Facet, Arbitrary, Debug, PartialEq)]
 #[repr(u8)]
 pub enum HomeCommand {
-    /// Show or manage home paths.
-    Path(HomePathArgs),
+    /// Show the home path.
+    Show(HomeShowArgs),
 }
 
 impl HomeArgs {
@@ -28,7 +28,7 @@ impl HomeArgs {
     /// This function will return an error if the subcommand fails.
     pub async fn invoke(self) -> Result<()> {
         match self.command {
-            HomeCommand::Path(args) => args.invoke().await?,
+            HomeCommand::Show(args) => args.invoke().await?,
         }
 
         Ok(())
@@ -39,9 +39,9 @@ impl ToArgs for HomeArgs {
     fn to_args(&self) -> Vec<OsString> {
         let mut args = Vec::new();
         match &self.command {
-            HomeCommand::Path(path_args) => {
-                args.push("path".into());
-                args.extend(path_args.to_args());
+            HomeCommand::Show(show_args) => {
+                args.push("show".into());
+                args.extend(show_args.to_args());
             }
         }
         args

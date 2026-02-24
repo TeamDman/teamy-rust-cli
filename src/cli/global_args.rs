@@ -13,6 +13,7 @@ use tracing::level_filters::LevelFilter;
 
 /// Global arguments that apply to all commands.
 #[derive(Facet, Arbitrary, Debug, Default, PartialEq)]
+#[facet(rename_all = "kebab-case")]
 pub struct GlobalArgs {
     /// Enable debug logging, including backtraces on panics.
     #[facet(args::named, default)]

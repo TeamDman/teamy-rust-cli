@@ -29,12 +29,13 @@ teamy-rust-cli on  main [!] is 📦 v0.2.0 via 🦀 v1.94.0-nightly
 │  ├── cli # CLI holder
 │  │  ├── cache
 │  │  │  ├── clean # my-app cache clean
-│  │  │  └── path
-│  │  │     └── show # my-app cache path show
+│  │  │  └── show # my-app cache show
+│  │  ├── docs
+│  │  │  ├── show # my-app docs show
+│  │  │  └── write # my-app docs write docs/
 │  │  ├── global_args.rs # Arguments that are applicable to all commands
 │  │  └── home
-│  │     └── path
-│  │        └── show # my-app home path show
+│  │     └── show # my-app home show
 │  ├── lib.rs # Entrypoint
 │  ├── logging
 │  │  ├── logging_config.rs # Configure object holds tracing filter and optional json output file
@@ -47,3 +48,12 @@ teamy-rust-cli on  main [!] is 📦 v0.2.0 via 🦀 v1.94.0-nightly
 │  └── cli_fuzzing.rs # Round-trip testing for Cli arbitrary implementation
 └── update.ps1 # Convenience: cargo install --path .
 ```
+
+Generate command help snapshots from the current CLI shape:
+
+```shell
+teamy-rust-cli.exe docs write docs/
+teamy-rust-cli.exe docs show
+```
+
+`docs write docs/` writes `docs/command-help/*.txt` (one file per command path, plus root help).

@@ -1,6 +1,6 @@
 use crate::cli::ToArgs;
 use crate::cli::cache::clean::CacheCleanArgs;
-use crate::cli::cache::path::CachePathArgs;
+use crate::cli::cache::show::CacheShowArgs;
 use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
@@ -21,8 +21,8 @@ pub struct CacheArgs {
 pub enum CacheCommand {
     /// Clean the cache.
     Clean(CacheCleanArgs),
-    /// Show or manage cache paths.
-    Path(CachePathArgs),
+    /// Show the cache path.
+    Show(CacheShowArgs),
 }
 
 impl CacheArgs {
@@ -32,7 +32,7 @@ impl CacheArgs {
     pub async fn invoke(self) -> Result<()> {
         match self.command {
             CacheCommand::Clean(args) => args.invoke().await?,
-            CacheCommand::Path(args) => args.invoke().await?,
+            CacheCommand::Show(args) => args.invoke().await?,
         }
 
         Ok(())
@@ -47,9 +47,9 @@ impl ToArgs for CacheArgs {
                 args.push("clean".into());
                 args.extend(clean_args.to_args());
             }
-            CacheCommand::Path(path_args) => {
-                args.push("path".into());
-                args.extend(path_args.to_args());
+            CacheCommand::Show(show_args) => {
+                args.push("show".into());
+                args.extend(show_args.to_args());
             }
         }
         args

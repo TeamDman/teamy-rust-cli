@@ -1,0 +1,301 @@
+use crate::cli::Cli;
+use crate::cli::ToArgs;
+use crate::cli::docs::show::DocsShowArgs;
+use crate::cli::docs::write::DocsWriteArgs;
+use arbitrary::Arbitrary;
+use eyre::Context;
+use eyre::Result;
+use eyre::bail;
+use facet::Facet;
+use facet::Type;
+use facet::UserType;
+use figue as args;
+use std::collections::BTreeSet;
+use std::ffi::OsString;
+use std::process::Command as ProcessCommand;
+
+/// Docs-related commands.
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
+pub struct DocsArgs {
+    /// The docs subcommand to run.
+    #[facet(args::subcommand)]
+    pub command: DocsCommand,
+}
+
+/// Docs subcommands.
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
+#[repr(u8)]
+pub enum DocsCommand {
+    /// Print command help docs to stdout.
+    Show(DocsShowArgs),
+    /// Write command help docs under the provided directory.
+    Write(DocsWriteArgs),
+}
+
+impl DocsArgs {
+    /// # Errors
+    ///
+    /// This function will return an error if the subcommand fails.
+    pub async fn invoke(self) -> Result<()> {
+        match self.command {
+            DocsCommand::Show(args) => args.invoke().await?,
+            DocsCommand::Write(args) => args.invoke().await?,
+        }
+        Ok(())
+    }
+}
+
+impl ToArgs for DocsArgs {
+    fn to_args(&self) -> Vec<OsString> {
+        let mut args = Vec::new();
+        match &self.command {
+            DocsCommand::Show(show_args) => {
+                args.push("show".into());
+                args.extend(show_args.to_args());
+            }
+            DocsCommand::Write(write_args) => {
+                args.push("write".into());
+                args.extend(write_args.to_args());
+            }
+        }
+        args
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct HelpSnapshot {
+    pub file_name: String,
+    pub invocation: String,
+    pub output: String,
+}
+
+/// # Errors
+///
+/// This function will return an error if command help output cannot be captured.
+pub(crate) fn generate_help_snapshots() -> Result<Vec<HelpSnapshot>> {
+    let binary_name = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().to_string()))
+        .unwrap_or_else(|| "teamy-rust-cli.exe".to_owned());
+
+    let command_paths = collect_command_paths_with_prefixes(&node_from_shape(Cli::SHAPE));
+    let mut snapshots = Vec::new();
+
+    for command_path in command_paths {
+        let output = capture_help_output(&command_path)?;
+        let invocation = if command_path.is_empty() {
+            format!("{binary_name} --help")
+        } else {
+            format!("{binary_name} {} --help", command_path.join(" "))
+        };
+        let file_stem = if command_path.is_empty() {
+            "root help.txt".to_owned()
+        } else {
+            format!("{} help.txt", command_path.join(" "))
+        };
+
+        snapshots.push(HelpSnapshot {
+            file_name: file_stem,
+            invocation,
+            output,
+        });
+    }
+
+    Ok(snapshots)
+}
+
+#[must_use]
+pub(crate) fn help_invocation_hints(program_name: &str) -> Vec<String> {
+    let command_paths = collect_command_paths_with_prefixes(&node_from_shape(Cli::SHAPE));
+    command_paths
+        .into_iter()
+        .filter(|path| !path.is_empty())
+        .map(|path| format!("{program_name} {} --help", path.join(" ")))
+        .collect()
+}
+
+#[must_use]
+pub(crate) fn help_invocation_hints_at_level(
+    program_name: &str,
+    context_path: &[String],
+    exclude_path: Option<&[String]>,
+) -> Vec<String> {
+    let command_paths = collect_command_paths_with_prefixes(&node_from_shape(Cli::SHAPE));
+    command_paths
+        .into_iter()
+        .filter(|path| {
+            !path.is_empty()
+                && path.len() == context_path.len() + 1
+                && path.starts_with(context_path)
+                && exclude_path != Some(path.as_slice())
+        })
+        .map(|path| format!("{program_name} {} --help", path.join(" ")))
+        .collect()
+}
+
+#[derive(Clone, Debug)]
+struct CommandBranch {
+    cli_name: String,
+    node: CommandNode,
+}
+
+#[derive(Clone, Debug, Default)]
+struct CommandNode {
+    subcommands: Vec<CommandBranch>,
+}
+
+fn unwrap_option_shape(mut shape: &'static facet::Shape) -> &'static facet::Shape {
+    while let Ok(option_def) = shape.def.into_option() {
+        shape = option_def.t;
+    }
+    shape
+}
+
+fn shape_struct_fields(shape: &'static facet::Shape) -> Option<&'static [facet::Field]> {
+    let shape = unwrap_option_shape(shape);
+    match shape.ty {
+        Type::User(UserType::Struct(struct_type)) => Some(struct_type.fields),
+        _ => None,
+    }
+}
+
+fn shape_enum_variants(shape: &'static facet::Shape) -> Option<&'static [facet::Variant]> {
+    let shape = unwrap_option_shape(shape);
+    match shape.ty {
+        Type::User(UserType::Enum(enum_type)) => Some(enum_type.variants),
+        _ => None,
+    }
+}
+
+fn to_kebab_case(name: &str) -> String {
+    let mut out = String::new();
+    let mut previous_is_alphanumeric = false;
+
+    for character in name.chars() {
+        if character == '_' {
+            out.push('-');
+            previous_is_alphanumeric = false;
+            continue;
+        }
+
+        if character.is_ascii_uppercase() {
+            if previous_is_alphanumeric {
+                out.push('-');
+            }
+            out.push(character.to_ascii_lowercase());
+            previous_is_alphanumeric = true;
+            continue;
+        }
+
+        out.push(character);
+        previous_is_alphanumeric = character.is_ascii_alphanumeric();
+    }
+
+    out
+}
+
+fn node_from_shape(shape: &'static facet::Shape) -> CommandNode {
+    shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields)
+}
+
+fn node_from_variant(variant: &facet::Variant) -> CommandNode {
+    if variant.data.fields.is_empty() {
+        return CommandNode::default();
+    }
+
+    let has_direct_arg_attributes = variant
+        .data
+        .fields
+        .iter()
+        .any(|field| field.has_attr(Some("args"), "subcommand"));
+
+    if has_direct_arg_attributes {
+        return node_from_fields(variant.data.fields);
+    }
+
+    if variant.data.fields.len() == 1 {
+        return node_from_shape(variant.data.fields[0].shape());
+    }
+
+    CommandNode::default()
+}
+
+fn node_from_fields(fields: &'static [facet::Field]) -> CommandNode {
+    let mut node = CommandNode::default();
+
+    for field in fields {
+        if field.has_attr(Some("args"), "subcommand") {
+            if let Some(variants) = shape_enum_variants(field.shape()) {
+                for variant in variants {
+                    node.subcommands.push(CommandBranch {
+                        cli_name: to_kebab_case(variant.effective_name()),
+                        node: node_from_variant(variant),
+                    });
+                }
+            }
+        }
+    }
+
+    node
+}
+
+fn collect_command_paths_with_prefixes(root: &CommandNode) -> Vec<Vec<String>> {
+    fn visit(node: &CommandNode, current: &mut Vec<String>, out: &mut BTreeSet<Vec<String>>) {
+        for branch in &node.subcommands {
+            current.push(branch.cli_name.clone());
+            out.insert(current.clone());
+            visit(&branch.node, current, out);
+            let _ = current.pop();
+        }
+    }
+
+    let mut out = BTreeSet::new();
+    out.insert(Vec::new());
+
+    let mut current = Vec::new();
+    visit(root, &mut current, &mut out);
+
+    let mut paths: Vec<Vec<String>> = out.into_iter().collect();
+    paths.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
+    paths
+}
+
+fn capture_help_output(command_path: &[String]) -> Result<String> {
+    let executable = std::env::current_exe().wrap_err("Failed to resolve current executable")?;
+    let output = ProcessCommand::new(&executable)
+        .args(command_path)
+        .arg("--help")
+        .output()
+        .wrap_err_with(|| {
+            if command_path.is_empty() {
+                format!("Failed to run {} --help", executable.display())
+            } else {
+                format!(
+                    "Failed to run {} {} --help",
+                    executable.display(),
+                    command_path.join(" ")
+                )
+            }
+        })?;
+
+    if !output.status.success() {
+        bail!(
+            "Help command failed for '{} --help' with status {}",
+            command_path.join(" "),
+            output
+                .status
+                .code()
+                .map_or_else(|| "unknown".to_owned(), |code| code.to_string())
+        );
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let text = if stdout.trim().is_empty() && !stderr.trim().is_empty() {
+        stderr
+    } else {
+        stdout
+    };
+
+    Ok(text)
+}

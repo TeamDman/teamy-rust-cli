@@ -1,5 +1,5 @@
 mod cache_cli;
 pub mod clean;
-pub mod path;
+pub mod show;
 
 pub use cache_cli::*;

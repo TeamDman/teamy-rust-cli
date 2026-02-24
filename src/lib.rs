@@ -7,6 +7,64 @@ pub mod paths;
 
 use crate::cli::Cli;
 
+fn help_description(args: &[String]) -> String {
+    let has_subcommand = args.iter().any(|arg| !arg.starts_with('-'));
+    let program_name = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().to_string()))
+        .unwrap_or_else(|| "teamy-rust-cli.exe".to_owned());
+
+    let context_path = args
+        .iter()
+        .filter(|arg| !arg.starts_with('-'))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    let hints = if has_subcommand {
+        let mut level_hints = crate::cli::docs::help_invocation_hints_at_level(
+            &program_name,
+            &context_path,
+            Some(&context_path),
+        );
+        if level_hints.is_empty() && !context_path.is_empty() {
+            level_hints = crate::cli::docs::help_invocation_hints_at_level(
+                &program_name,
+                &context_path[..context_path.len() - 1],
+                Some(&context_path),
+            );
+        }
+        level_hints
+    } else {
+        crate::cli::docs::help_invocation_hints(&program_name)
+    };
+
+    if hints.is_empty() {
+        return String::new();
+    }
+
+    let mut description = String::from("More help:\n");
+    for hint in hints {
+        description.push_str("  ");
+        description.push_str(&hint);
+        description.push('\n');
+    }
+    description.trim_end().to_owned()
+}
+
+fn normalized_cli_args() -> Vec<String> {
+    let mut args = std::env::args().skip(1).collect::<Vec<_>>();
+    let has_help_flag = args.iter().any(|arg| arg == "--help" || arg == "-h");
+    if !has_help_flag && matches!(args.last().map(String::as_str), Some("help")) {
+        if args.len() == 1 {
+            args[0] = "--help".to_owned();
+        } else {
+            let _ = args.pop();
+            args.push("--help".to_owned());
+        }
+    }
+    args
+}
+
 /// Version string combining package version and git revision.
 const VERSION: &str = concat!(
     env!("CARGO_PKG_VERSION"),
@@ -28,13 +86,23 @@ pub fn main() -> eyre::Result<()> {
     // Install color_eyre for better error reports
     color_eyre::install()?;
 
+    let normalized_args = normalized_cli_args();
+    let extra_help_description = help_description(&normalized_args);
+
     // Parse command line arguments using figue
     // unwrap() handles --help, --version, completions, and errors with proper exit codes
     let cli: Cli = figue::Driver::new(
         figue::builder::<Cli>()
             .expect("schema should be valid")
-            .cli(|c| c)
-            .help(|h| h.version(VERSION))
+            .cli(|c| c.args(normalized_args.clone()))
+            .help(|h| {
+                let base = h.version(VERSION);
+                if extra_help_description.is_empty() {
+                    base
+                } else {
+                    base.description(extra_help_description.clone())
+                }
+            })
             .build(),
     )
     .run()
