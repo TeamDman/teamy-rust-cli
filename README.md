@@ -67,3 +67,4 @@ Some stuff can/should probably be upstreamed into a a figue fork.
 - `--help` including alternate commands
 - `ToArgs` trait and auto-implementation using facet SHAPE
 - tests using the arbitrary implementation for the cli types that generate random commands and call toargs and parse to ensure equality
+- `--help` including the URL of the permalink on github for this git revision of the command handler file
