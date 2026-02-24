@@ -24,7 +24,8 @@ if (-not (Test-Path -LiteralPath $destinationRepoPath -PathType Container)) {
 
 $excludedDirectories = @(
 	(Join-Path -Path $sourceRepoPath -ChildPath '.git'),
-	(Join-Path -Path $sourceRepoPath -ChildPath 'target')
+	(Join-Path -Path $sourceRepoPath -ChildPath 'target'),
+	(Join-Path -Path $sourceRepoPath -ChildPath 'init-other-repo.ps1')
 )
 
 Write-Verbose "Source: $sourceRepoPath"
