@@ -21,7 +21,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
 facet = "0.44.1"
-figue = { git = "https://github.com/TeamDman/figue", rev = "d1455a9c04356ae4b8d1989401a9864e2d2e0ac1", features = ["arbitrary"] }
+figue = { git = "https://github.com/TeamDman/figue", rev = "614af4ce3e42d8a64fce47730fa39034cad2de23", features = ["arbitrary"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]

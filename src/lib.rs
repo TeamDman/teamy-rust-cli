@@ -38,6 +38,7 @@ pub fn main() -> eyre::Result<()> {
             .help(move |help| {
                 help.version(VERSION)
                     .include_implementation_source_file(true)
+                    .include_implementation_git_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))
             })
             .build(),
     )
