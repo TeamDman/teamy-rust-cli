@@ -413,7 +413,7 @@ dependencies = [
 [[package]]
 name = "figue"
 version = "1.0.0"
-source = "git+https://github.com/bearcove/figue?branch=main#d918c0357e7a0973054e0e01546c127344978cd8"
+source = "git+https://github.com/bearcove/figue?rev=d918c0357e7a0973054e0e01546c127344978cd8#d918c0357e7a0973054e0e01546c127344978cd8"
 dependencies = [
  "ariadne",
  "camino",
@@ -437,7 +437,7 @@ dependencies = [
 [[package]]
 name = "figue-attrs"
 version = "1.0.0"
-source = "git+https://github.com/bearcove/figue?branch=main#d918c0357e7a0973054e0e01546c127344978cd8"
+source = "git+https://github.com/bearcove/figue?rev=d918c0357e7a0973054e0e01546c127344978cd8#d918c0357e7a0973054e0e01546c127344978cd8"
 dependencies = [
  "facet",
 ]
