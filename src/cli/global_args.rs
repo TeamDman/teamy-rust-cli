@@ -23,7 +23,12 @@ pub struct GlobalArgs {
     #[facet(args::named)]
     pub log_filter: Option<String>,
 
-    /// Write structured ndjson logs to this file or directory.
+    /// Write structured ndjson logs.
+    ///
+    /// If a file path is provided, logs are written to that file.
+    /// If a directory path is provided, a filename like `log_<timestamp>.ndjson`
+    /// is generated in that directory.
+    /// If omitted, no JSON log file is written.
     #[facet(args::named)]
     pub log_file: Option<PathBuf>,
 }
