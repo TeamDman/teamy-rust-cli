@@ -1,4 +1,3 @@
-use crate::cli::ToArgs;
 use arbitrary::Arbitrary;
 use eyre::Context;
 use eyre::Result;
@@ -25,5 +24,3 @@ impl CacheOpenArgs {
         Ok(())
     }
 }
-
-impl ToArgs for CacheOpenArgs {}

@@ -1,4 +1,3 @@
-use crate::cli::ToArgs;
 use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
@@ -16,5 +15,3 @@ impl CacheCleanArgs {
         Ok(())
     }
 }
-
-impl ToArgs for CacheCleanArgs {}

@@ -1,11 +1,9 @@
-use crate::cli::ToArgs;
 use crate::cli::home::open::HomeOpenArgs;
 use crate::cli::home::show::HomeShowArgs;
 use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
 use figue as args;
-use std::ffi::OsString;
 
 /// Home-related commands.
 #[derive(Facet, Arbitrary, Debug, PartialEq)]
@@ -36,22 +34,5 @@ impl HomeArgs {
         }
 
         Ok(())
-    }
-}
-
-impl ToArgs for HomeArgs {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        match &self.command {
-            HomeCommand::Open(open_args) => {
-                args.push("open".into());
-                args.extend(open_args.to_args());
-            }
-            HomeCommand::Show(show_args) => {
-                args.push("show".into());
-                args.extend(show_args.to_args());
-            }
-        }
-        args
     }
 }

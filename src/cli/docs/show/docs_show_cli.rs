@@ -1,4 +1,3 @@
-use crate::cli::ToArgs;
 use crate::cli::docs::generate_help_snapshots;
 use arbitrary::Arbitrary;
 use eyre::Result;
@@ -31,5 +30,3 @@ impl DocsShowArgs {
         Ok(())
     }
 }
-
-impl ToArgs for DocsShowArgs {}

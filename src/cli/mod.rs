@@ -13,22 +13,6 @@ use eyre::Context;
 use facet::Facet;
 use figue::FigueBuiltins;
 use figue::{self as args};
-use std::ffi::OsString;
-
-/// Trait for converting CLI structures to command line arguments.
-pub trait ToArgs {
-    /// Convert the CLI structure to command line arguments.
-    fn to_args(&self) -> Vec<OsString> {
-        Vec::new()
-    }
-}
-
-// Blanket implementation for references
-impl<T: ToArgs> ToArgs for &T {
-    fn to_args(&self) -> Vec<OsString> {
-        (*self).to_args()
-    }
-}
 
 /// A demonstration command line utility.
 #[derive(Facet, Arbitrary, Debug)]
@@ -68,15 +52,6 @@ impl Cli {
     }
 }
 
-impl ToArgs for Cli {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        args.extend(self.global.to_args());
-        args.extend(self.command.to_args());
-        args
-    }
-}
-
 /// A demonstration command line utility.
 #[derive(Facet, Arbitrary, Debug, PartialEq)]
 #[repr(u8)]
@@ -99,26 +74,5 @@ impl Command {
             Command::Docs(args) => args.invoke().await,
             Command::Home(args) => args.invoke().await,
         }
-    }
-}
-
-impl ToArgs for Command {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        match self {
-            Command::Cache(cache_args) => {
-                args.push("cache".into());
-                args.extend(cache_args.to_args());
-            }
-            Command::Docs(docs_args) => {
-                args.push("docs".into());
-                args.extend(docs_args.to_args());
-            }
-            Command::Home(home_args) => {
-                args.push("home".into());
-                args.extend(home_args.to_args());
-            }
-        }
-        args
     }
 }

@@ -1,4 +1,3 @@
-use crate::cli::ToArgs;
 use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
@@ -17,5 +16,3 @@ impl HomeShowArgs {
         Ok(())
     }
 }
-
-impl ToArgs for HomeShowArgs {}

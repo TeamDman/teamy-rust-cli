@@ -75,7 +75,7 @@ fn normalized_cli_args() -> Vec<String> {
     let has_help_flag = args.iter().any(|arg| arg == "--help" || arg == "-h");
     if !has_help_flag && matches!(args.last().map(String::as_str), Some("help")) {
         if args.len() == 1 {
-            args[0] = "--help".to_owned();
+            "--help".clone_into(&mut args[0]);
         } else {
             let _ = args.pop();
             args.push("--help".to_owned());

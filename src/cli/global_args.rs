@@ -1,13 +1,10 @@
 //! Global arguments that apply to all commands.
 
-use crate::cli::ToArgs;
 use crate::logging::LoggingConfig;
 use arbitrary::Arbitrary;
 use chrono::Local;
 use facet::Facet;
 use figue::{self as args};
-use std::ffi::OsString;
-use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::level_filters::LevelFilter;
 
@@ -30,7 +27,7 @@ pub struct GlobalArgs {
     /// is generated in that directory.
     /// If omitted, no JSON log file is written.
     #[facet(args::named)]
-    pub log_file: Option<PathBuf>,
+    pub log_file: Option<String>,
 }
 
 impl GlobalArgs {
@@ -49,31 +46,13 @@ impl GlobalArgs {
             .into(),
             json_log_path: match &self.log_file {
                 None => None,
-                Some(path) if path.is_dir() => {
+                Some(path) if std::path::PathBuf::from(path).is_dir() => {
                     let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
                     let filename = format!("log_{timestamp}.ndjson");
-                    Some(path.join(filename))
+                    Some(std::path::PathBuf::from(path).join(filename))
                 }
-                Some(path) => Some(path.clone()),
+                Some(path) => Some(std::path::PathBuf::from(path)),
             },
         })
-    }
-}
-
-impl ToArgs for GlobalArgs {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        if self.debug {
-            args.push("--debug".into());
-        }
-        if let Some(filter) = &self.log_filter {
-            args.push("--log-filter".into());
-            args.push(filter.into());
-        }
-        if let Some(path) = &self.log_file {
-            args.push("--log-file".into());
-            args.push(path.as_os_str().into());
-        }
-        args
     }
 }

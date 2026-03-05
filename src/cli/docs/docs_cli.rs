@@ -1,5 +1,4 @@
 use crate::cli::Cli;
-use crate::cli::ToArgs;
 use crate::cli::docs::show::DocsShowArgs;
 use crate::cli::docs::write::DocsWriteArgs;
 use crate::cli::facet_shape;
@@ -10,7 +9,6 @@ use eyre::bail;
 use facet::Facet;
 use figue as args;
 use std::collections::BTreeSet;
-use std::ffi::OsString;
 use std::process::Command as ProcessCommand;
 
 /// Docs-related commands.
@@ -41,23 +39,6 @@ impl DocsArgs {
             DocsCommand::Write(args) => args.invoke().await?,
         }
         Ok(())
-    }
-}
-
-impl ToArgs for DocsArgs {
-    fn to_args(&self) -> Vec<OsString> {
-        let mut args = Vec::new();
-        match &self.command {
-            DocsCommand::Show(show_args) => {
-                args.push("show".into());
-                args.extend(show_args.to_args());
-            }
-            DocsCommand::Write(write_args) => {
-                args.push("write".into());
-                args.extend(write_args.to_args());
-            }
-        }
-        args
     }
 }
 
@@ -197,14 +178,14 @@ fn node_from_fields(fields: &'static [facet::Field]) -> CommandNode {
     let mut node = CommandNode::default();
 
     for field in fields {
-        if field.has_attr(Some("args"), "subcommand") {
-            if let Some(variants) = facet_shape::shape_enum_variants(field.shape()) {
-                for variant in variants {
-                    node.subcommands.push(CommandBranch {
-                        cli_name: facet_shape::to_kebab_case(variant.effective_name()),
-                        node: node_from_variant(variant),
-                    });
-                }
+        if field.has_attr(Some("args"), "subcommand")
+            && let Some(variants) = facet_shape::shape_enum_variants(field.shape())
+        {
+            for variant in variants {
+                node.subcommands.push(CommandBranch {
+                    cli_name: facet_shape::to_kebab_case(variant.effective_name()),
+                    node: node_from_variant(variant),
+                });
             }
         }
     }
