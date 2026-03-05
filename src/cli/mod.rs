@@ -1,5 +1,6 @@
 pub mod cache;
 pub mod docs;
+pub mod facet_shape;
 pub mod global_args;
 pub mod home;
 

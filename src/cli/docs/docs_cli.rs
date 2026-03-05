@@ -2,13 +2,12 @@ use crate::cli::Cli;
 use crate::cli::ToArgs;
 use crate::cli::docs::show::DocsShowArgs;
 use crate::cli::docs::write::DocsWriteArgs;
+use crate::cli::facet_shape;
 use arbitrary::Arbitrary;
 use eyre::Context;
 use eyre::Result;
 use eyre::bail;
 use facet::Facet;
-use facet::Type;
-use facet::UserType;
 use figue as args;
 use std::collections::BTreeSet;
 use std::ffi::OsString;
@@ -75,7 +74,10 @@ pub(crate) struct HelpSnapshot {
 pub(crate) fn generate_help_snapshots() -> Result<Vec<HelpSnapshot>> {
     let binary_name = std::env::current_exe()
         .ok()
-        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().to_string()))
+        .and_then(|path| {
+            path.file_name()
+                .map(|name| name.to_string_lossy().to_string())
+        })
         .unwrap_or_else(|| "teamy-rust-cli.exe".to_owned());
 
     let command_paths = collect_command_paths_with_prefixes(&node_from_shape(Cli::SHAPE));
@@ -110,7 +112,7 @@ pub(crate) fn help_invocation_hints(program_name: &str) -> Vec<String> {
     command_paths
         .into_iter()
         .filter(|path| !path.is_empty())
-    .map(|path| render_help_hint(program_name, &path))
+        .map(|path| render_help_hint(program_name, &path))
         .collect()
 }
 
@@ -158,58 +160,9 @@ struct CommandNode {
     subcommands: Vec<CommandBranch>,
 }
 
-fn unwrap_option_shape(mut shape: &'static facet::Shape) -> &'static facet::Shape {
-    while let Ok(option_def) = shape.def.into_option() {
-        shape = option_def.t;
-    }
-    shape
-}
-
-fn shape_struct_fields(shape: &'static facet::Shape) -> Option<&'static [facet::Field]> {
-    let shape = unwrap_option_shape(shape);
-    match shape.ty {
-        Type::User(UserType::Struct(struct_type)) => Some(struct_type.fields),
-        _ => None,
-    }
-}
-
-fn shape_enum_variants(shape: &'static facet::Shape) -> Option<&'static [facet::Variant]> {
-    let shape = unwrap_option_shape(shape);
-    match shape.ty {
-        Type::User(UserType::Enum(enum_type)) => Some(enum_type.variants),
-        _ => None,
-    }
-}
-
-fn to_kebab_case(name: &str) -> String {
-    let mut out = String::new();
-    let mut previous_is_alphanumeric = false;
-
-    for character in name.chars() {
-        if character == '_' {
-            out.push('-');
-            previous_is_alphanumeric = false;
-            continue;
-        }
-
-        if character.is_ascii_uppercase() {
-            if previous_is_alphanumeric {
-                out.push('-');
-            }
-            out.push(character.to_ascii_lowercase());
-            previous_is_alphanumeric = true;
-            continue;
-        }
-
-        out.push(character);
-        previous_is_alphanumeric = character.is_ascii_alphanumeric();
-    }
-
-    out
-}
-
 fn node_from_shape(shape: &'static facet::Shape) -> CommandNode {
-    let mut node = shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields);
+    let mut node =
+        facet_shape::shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields);
     node.source_file = shape.source_file;
     node
 }
@@ -245,10 +198,10 @@ fn node_from_fields(fields: &'static [facet::Field]) -> CommandNode {
 
     for field in fields {
         if field.has_attr(Some("args"), "subcommand") {
-            if let Some(variants) = shape_enum_variants(field.shape()) {
+            if let Some(variants) = facet_shape::shape_enum_variants(field.shape()) {
                 for variant in variants {
                     node.subcommands.push(CommandBranch {
-                        cli_name: to_kebab_case(variant.effective_name()),
+                        cli_name: facet_shape::to_kebab_case(variant.effective_name()),
                         node: node_from_variant(variant),
                     });
                 }
@@ -270,7 +223,10 @@ fn source_file_for_path_from_node(node: &CommandNode, path: &[String]) -> Option
     }
 
     let (head, tail) = path.split_first()?;
-    let branch = node.subcommands.iter().find(|branch| branch.cli_name == *head)?;
+    let branch = node
+        .subcommands
+        .iter()
+        .find(|branch| branch.cli_name == *head)?;
     source_file_for_path_from_node(&branch.node, tail)
 }
 

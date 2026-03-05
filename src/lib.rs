@@ -11,7 +11,10 @@ fn help_description(args: &[String]) -> String {
     let has_subcommand = args.iter().any(|arg| !arg.starts_with('-'));
     let program_name = std::env::current_exe()
         .ok()
-        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().to_string()))
+        .and_then(|path| {
+            path.file_name()
+                .map(|name| name.to_string_lossy().to_string())
+        })
         .unwrap_or_else(|| "teamy-rust-cli.exe".to_owned());
 
     let context_path = args
@@ -106,17 +109,18 @@ pub fn main() -> eyre::Result<()> {
     let extra_help_description = help_description(&normalized_args);
 
     // Parse command line arguments using figue
-    // unwrap() handles --help, --version, completions, and errors with proper exit codes
+    // unwrap() is figue's intended CLI entry behavior:
+    // it exits with proper codes for --help/--version/completions/parse-errors.
     let cli: Cli = figue::Driver::new(
         figue::builder::<Cli>()
             .expect("schema should be valid")
-            .cli(|c| c.args(normalized_args.clone()))
-            .help(|h| {
+            .cli(move |c| c.args(normalized_args))
+            .help(move |h| {
                 let base = h.version(VERSION);
                 if extra_help_description.is_empty() {
                     base
                 } else {
-                    base.description(extra_help_description.clone())
+                    base.description(extra_help_description)
                 }
             })
             .build(),

@@ -2,12 +2,11 @@
 
 use arbitrary::Arbitrary;
 use facet::Facet;
-use facet::Type;
-use facet::UserType;
 use rand::TryRngCore;
 use rand::rngs::OsRng;
 use teamy_rust_cli::cli::Cli;
 use teamy_rust_cli::cli::ToArgs;
+use teamy_rust_cli::cli::facet_shape;
 
 #[derive(Clone, Debug)]
 struct CommandBranch {
@@ -40,67 +39,8 @@ fn parse_cli_from_args(args: &[std::ffi::OsString]) -> Result<Cli, figue::Driver
     .map(|output| output.get_silent())
 }
 
-fn to_kebab_case(name: &str) -> String {
-    let mut out = String::new();
-    let mut previous_is_alphanumeric = false;
-
-    for character in name.chars() {
-        if character == '_' {
-            out.push('-');
-            previous_is_alphanumeric = false;
-            continue;
-        }
-
-        if character.is_ascii_uppercase() {
-            if previous_is_alphanumeric {
-                out.push('-');
-            }
-            out.push(character.to_ascii_lowercase());
-            previous_is_alphanumeric = true;
-            continue;
-        }
-
-        out.push(character);
-        previous_is_alphanumeric = character.is_ascii_alphanumeric();
-    }
-
-    out
-}
-
-fn normalize_command_token(token: &str) -> String {
-    token.replace('_', "-").to_ascii_lowercase()
-}
-
-fn unwrap_option_shape(mut shape: &'static facet::Shape) -> &'static facet::Shape {
-    while let Ok(option_def) = shape.def.into_option() {
-        shape = option_def.t;
-    }
-    shape
-}
-
-fn shape_struct_fields(shape: &'static facet::Shape) -> Option<&'static [facet::Field]> {
-    let shape = unwrap_option_shape(shape);
-    match shape.ty {
-        Type::User(UserType::Struct(struct_type)) => Some(struct_type.fields),
-        _ => None,
-    }
-}
-
-fn shape_enum_variants(shape: &'static facet::Shape) -> Option<&'static [facet::Variant]> {
-    let shape = unwrap_option_shape(shape);
-    match shape.ty {
-        Type::User(UserType::Enum(enum_type)) => Some(enum_type.variants),
-        _ => None,
-    }
-}
-
-fn field_is_bool_flag(field: &facet::Field) -> bool {
-    let shape = unwrap_option_shape(field.shape());
-    shape.type_identifier.eq_ignore_ascii_case("bool")
-}
-
 fn node_from_shape(shape: &'static facet::Shape) -> CommandNode {
-    shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields)
+    facet_shape::shape_struct_fields(shape).map_or_else(CommandNode::default, node_from_fields)
 }
 
 fn node_from_variant(variant: &facet::Variant) -> CommandNode {
@@ -135,19 +75,19 @@ fn node_from_fields(fields: &'static [facet::Field]) -> CommandNode {
         }
 
         if field.has_attr(Some("args"), "named") {
-            let flag_name = to_kebab_case(field.effective_name());
+            let flag_name = facet_shape::to_kebab_case(field.effective_name());
             let consumes_value =
-                !field.has_attr(Some("args"), "counted") && !field_is_bool_flag(field);
+                !field.has_attr(Some("args"), "counted") && !facet_shape::field_is_bool_flag(field);
             node.named_flag_consumes_value
                 .insert(flag_name, consumes_value);
             continue;
         }
 
         if field.has_attr(Some("args"), "subcommand") {
-            if let Some(variants) = shape_enum_variants(field.shape()) {
+            if let Some(variants) = facet_shape::shape_enum_variants(field.shape()) {
                 for variant in variants {
                     node.subcommands.push(CommandBranch {
-                        cli_name: to_kebab_case(variant.effective_name()),
+                        cli_name: facet_shape::to_kebab_case(variant.effective_name()),
                         effective_name: variant.effective_name().to_owned(),
                         node: node_from_variant(variant),
                     });
@@ -227,7 +167,7 @@ fn extract_subcommand_path_from_args(
             if let Some(branch) = node
                 .subcommands
                 .iter()
-                .find(|branch| branch.cli_name == normalize_command_token(token))
+                .find(|branch| branch.cli_name == facet_shape::normalize_command_token(token))
             {
                 output.push(branch.effective_name.clone());
                 *index += 1;
