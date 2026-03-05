@@ -22,20 +22,26 @@ if (-not (Test-Path -LiteralPath $destinationRepoPath -PathType Container)) {
 	throw "Destination path is not a directory: $destinationRepoPath"
 }
 
+
 $excludedDirectories = @(
 	(Join-Path -Path $sourceRepoPath -ChildPath '.git'),
-	(Join-Path -Path $sourceRepoPath -ChildPath 'target'),
+	(Join-Path -Path $sourceRepoPath -ChildPath 'target')
+)
+
+$excludedFiles = @(
 	(Join-Path -Path $sourceRepoPath -ChildPath 'init-other-repo.ps1')
 )
 
 Write-Verbose "Source: $sourceRepoPath"
 Write-Verbose "Destination: $destinationRepoPath"
 Write-Verbose "Excluded directories: $($excludedDirectories -join ', ')"
+Write-Verbose "Excluded files: $($excludedFiles -join ', ')"
 Write-Output "Copying template files from '$sourceRepoPath' to '$destinationRepoPath'..."
 
 # /E  : copy subdirectories, including empty ones.
 # /XD : exclude directories from the copy operation.
-& robocopy $sourceRepoPath $destinationRepoPath /E /XD $excludedDirectories
+# /XF : exclude files from the copy operation.
+& robocopy $sourceRepoPath $destinationRepoPath /E /XD $excludedDirectories /XF $excludedFiles
 $robocopyExitCode = $LASTEXITCODE
 
 $robocopyExitCodeTable = [ordered]@{
