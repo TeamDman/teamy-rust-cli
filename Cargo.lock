@@ -427,7 +427,7 @@ dependencies = [
 [[package]]
 name = "figue"
 version = "2.0.0"
-source = "git+https://github.com/TeamDman/figue?rev=a02e1da3022652852c77a78c22534664d8011195#a02e1da3022652852c77a78c22534664d8011195"
+source = "git+https://github.com/TeamDman/figue?rev=26b929b8f9fc0564e988864e96fb988470f37b44#26b929b8f9fc0564e988864e96fb988470f37b44"
 dependencies = [
  "arbitrary",
  "ariadne",
@@ -454,7 +454,7 @@ dependencies = [
 [[package]]
 name = "figue-attrs"
 version = "2.0.0"
-source = "git+https://github.com/TeamDman/figue?rev=a02e1da3022652852c77a78c22534664d8011195#a02e1da3022652852c77a78c22534664d8011195"
+source = "git+https://github.com/TeamDman/figue?rev=26b929b8f9fc0564e988864e96fb988470f37b44#26b929b8f9fc0564e988864e96fb988470f37b44"
 dependencies = [
  "facet",
 ]
