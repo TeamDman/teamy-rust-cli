@@ -87,48 +87,6 @@ pub(crate) fn generate_help_snapshots() -> Result<Vec<HelpSnapshot>> {
     Ok(snapshots)
 }
 
-#[must_use]
-pub(crate) fn help_invocation_hints(program_name: &str) -> Vec<String> {
-    let command_paths = collect_command_paths_with_prefixes(&node_from_shape(Cli::SHAPE));
-    command_paths
-        .into_iter()
-        .filter(|path| !path.is_empty())
-        .map(|path| render_help_hint(program_name, &path))
-        .collect()
-}
-
-#[must_use]
-pub(crate) fn help_invocation_hints_at_level(
-    program_name: &str,
-    context_path: &[String],
-    exclude_path: Option<&[String]>,
-) -> Vec<String> {
-    let command_paths = collect_command_paths_with_prefixes(&node_from_shape(Cli::SHAPE));
-    command_paths
-        .into_iter()
-        .filter(|path| {
-            !path.is_empty()
-                && path.len() == context_path.len() + 1
-                && path.starts_with(context_path)
-                && exclude_path != Some(path.as_slice())
-        })
-        .map(|path| render_help_hint(program_name, &path))
-        .collect()
-}
-
-fn render_help_hint(program_name: &str, path: &[String]) -> String {
-    let invocation = format!("{program_name} {} --help", path.join(" "));
-    match source_file_for_command_path(path) {
-        Some(source_file) => format!("{invocation}    [impl: {source_file}]"),
-        None => invocation,
-    }
-}
-
-#[must_use]
-pub(crate) fn help_implementation_source(path: &[String]) -> Option<&'static str> {
-    source_file_for_command_path(path)
-}
-
 #[derive(Clone, Debug)]
 struct CommandBranch {
     cli_name: String,
@@ -191,24 +149,6 @@ fn node_from_fields(fields: &'static [facet::Field]) -> CommandNode {
     }
 
     node
-}
-
-fn source_file_for_command_path(path: &[String]) -> Option<&'static str> {
-    let root = node_from_shape(Cli::SHAPE);
-    source_file_for_path_from_node(&root, path)
-}
-
-fn source_file_for_path_from_node(node: &CommandNode, path: &[String]) -> Option<&'static str> {
-    if path.is_empty() {
-        return node.source_file;
-    }
-
-    let (head, tail) = path.split_first()?;
-    let branch = node
-        .subcommands
-        .iter()
-        .find(|branch| branch.cli_name == *head)?;
-    source_file_for_path_from_node(&branch.node, tail)
 }
 
 fn collect_command_paths_with_prefixes(root: &CommandNode) -> Vec<Vec<String>> {
