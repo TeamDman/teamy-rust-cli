@@ -19,7 +19,7 @@ use figue::{self as args};
 pub struct Cli {
     /// Global arguments (`debug`, `log_filter`, `log_file`).
     #[facet(flatten)]
-    pub global: GlobalArgs,
+    pub global_args: GlobalArgs,
 
     /// Standard CLI options (help, version, completions).
     #[facet(flatten)]
@@ -34,7 +34,7 @@ pub struct Cli {
 impl PartialEq for Cli {
     fn eq(&self, other: &Self) -> bool {
         // Ignore builtins in comparison since FigueBuiltins doesn't implement PartialEq
-        self.global == other.global && self.command == other.command
+        self.global_args == other.global_args && self.command == other.command
     }
 }
 
