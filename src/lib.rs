@@ -2,7 +2,7 @@
 #![deny(clippy::disallowed_macros)]
 
 pub mod cli;
-pub mod logging;
+pub mod logging_init;
 pub mod paths;
 
 use crate::cli::Cli;
@@ -46,7 +46,7 @@ pub fn main() -> eyre::Result<()> {
     .unwrap();
 
     // Initialize logging
-    logging::init_logging(&cli.global.logging_config()?)?;
+    logging_init::init_logging(&cli.global)?;
 
     #[cfg(windows)]
     {

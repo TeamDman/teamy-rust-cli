@@ -1,12 +1,8 @@
 //! Global arguments that apply to all commands.
 
-use crate::logging::LoggingConfig;
 use arbitrary::Arbitrary;
-use chrono::Local;
 use facet::Facet;
 use figue::{self as args};
-use std::str::FromStr;
-use tracing::level_filters::LevelFilter;
 
 /// Global arguments that apply to all commands.
 #[derive(Facet, Arbitrary, Debug, Default, PartialEq)]
@@ -28,31 +24,4 @@ pub struct GlobalArgs {
     /// If omitted, no JSON log file is written.
     #[facet(args::named)]
     pub log_file: Option<String>,
-}
-
-impl GlobalArgs {
-    /// Get the logging configuration from CLI arguments.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the log filter string is invalid.
-    pub fn logging_config(&self) -> eyre::Result<LoggingConfig> {
-        Ok(LoggingConfig {
-            default_directive: match (self.debug, &self.log_filter) {
-                (true, _) => LevelFilter::DEBUG,
-                (false, Some(filter)) => LevelFilter::from_str(filter)?,
-                (false, None) => LevelFilter::INFO,
-            }
-            .into(),
-            json_log_path: match &self.log_file {
-                None => None,
-                Some(path) if std::path::PathBuf::from(path).is_dir() => {
-                    let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
-                    let filename = format!("log_{timestamp}.ndjson");
-                    Some(std::path::PathBuf::from(path).join(filename))
-                }
-                Some(path) => Some(std::path::PathBuf::from(path)),
-            },
-        })
-    }
 }
