@@ -1,22 +1,29 @@
-use crate::cli::ToArgs;
 use crate::cli::cache::clean::CacheCleanArgs;
-use crate::cli::cache::path::CachePathArgs;
+use crate::cli::cache::open::CacheOpenArgs;
+use crate::cli::cache::show::CacheShowArgs;
 use arbitrary::Arbitrary;
-use clap::Args;
-use clap::Subcommand;
 use eyre::Result;
+use facet::Facet;
+use figue as args;
 
 /// Cache-related commands.
-#[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 pub struct CacheArgs {
-    #[command(subcommand)]
+    /// The cache subcommand to run.
+    #[facet(args::subcommand)]
     pub command: CacheCommand,
 }
 
-#[derive(Subcommand, Debug, Clone, Arbitrary, PartialEq)]
+/// Cache subcommands.
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
+#[repr(u8)]
 pub enum CacheCommand {
+    /// Clean the cache.
     Clean(CacheCleanArgs),
-    Path(CachePathArgs),
+    /// Open the cache path in the file manager.
+    Open(CacheOpenArgs),
+    /// Show the cache path.
+    Show(CacheShowArgs),
 }
 
 impl CacheArgs {
@@ -26,26 +33,10 @@ impl CacheArgs {
     pub async fn invoke(self) -> Result<()> {
         match self.command {
             CacheCommand::Clean(args) => args.invoke().await?,
-            CacheCommand::Path(args) => args.invoke().await?,
+            CacheCommand::Open(args) => args.invoke().await?,
+            CacheCommand::Show(args) => args.invoke().await?,
         }
 
         Ok(())
-    }
-}
-
-impl ToArgs for CacheArgs {
-    fn to_args(&self) -> Vec<std::ffi::OsString> {
-        let mut args = Vec::new();
-        match &self.command {
-            CacheCommand::Clean(clean_args) => {
-                args.push("clean".into());
-                args.extend(clean_args.to_args());
-            }
-            CacheCommand::Path(path_args) => {
-                args.push("path".into());
-                args.extend(path_args.to_args());
-            }
-        }
-        args
     }
 }

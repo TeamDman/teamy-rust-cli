@@ -1,20 +1,26 @@
-use crate::cli::ToArgs;
-use crate::cli::home::path::HomePathArgs;
+use crate::cli::home::open::HomeOpenArgs;
+use crate::cli::home::show::HomeShowArgs;
 use arbitrary::Arbitrary;
-use clap::Args;
-use clap::Subcommand;
 use eyre::Result;
+use facet::Facet;
+use figue as args;
 
 /// Home-related commands.
-#[derive(Args, Debug, Clone, Arbitrary, PartialEq)]
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
 pub struct HomeArgs {
-    #[command(subcommand)]
+    /// The home subcommand to run.
+    #[facet(args::subcommand)]
     pub command: HomeCommand,
 }
 
-#[derive(Subcommand, Debug, Clone, Arbitrary, PartialEq)]
+/// Home subcommands.
+#[derive(Facet, Arbitrary, Debug, PartialEq)]
+#[repr(u8)]
 pub enum HomeCommand {
-    Path(HomePathArgs),
+    /// Open the home path in the file manager.
+    Open(HomeOpenArgs),
+    /// Show the home path.
+    Show(HomeShowArgs),
 }
 
 impl HomeArgs {
@@ -23,22 +29,10 @@ impl HomeArgs {
     /// This function will return an error if the subcommand fails.
     pub async fn invoke(self) -> Result<()> {
         match self.command {
-            HomeCommand::Path(args) => args.invoke().await?,
+            HomeCommand::Open(args) => args.invoke().await?,
+            HomeCommand::Show(args) => args.invoke().await?,
         }
 
         Ok(())
-    }
-}
-
-impl ToArgs for HomeArgs {
-    fn to_args(&self) -> Vec<std::ffi::OsString> {
-        let mut args = Vec::new();
-        match &self.command {
-            HomeCommand::Path(path_args) => {
-                args.push("path".into());
-                args.extend(path_args.to_args());
-            }
-        }
-        args
     }
 }

@@ -1,4 +1,5 @@
 mod home_cli;
-pub mod path;
+pub mod open;
+pub mod show;
 
 pub use home_cli::*;

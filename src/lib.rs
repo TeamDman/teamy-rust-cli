@@ -2,28 +2,51 @@
 #![deny(clippy::disallowed_macros)]
 
 pub mod cli;
-pub mod logging;
+pub mod logging_init;
 pub mod paths;
 
 use crate::cli::Cli;
-use clap::CommandFactory;
-use clap::FromArgMatches;
 
-// Entrypoint for the program to reduce coupling to the name of this crate.
+/// Version string combining package version and git revision.
+const VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (rev ",
+    env!("GIT_REVISION"),
+    ")"
+);
+
+/// Entrypoint for the program.
 ///
 /// # Errors
 ///
 /// This function will return an error if `color_eyre` installation, CLI parsing, logging initialization, or command execution fails.
+///
+/// # Panics
+///
+/// Panics if the CLI schema is invalid (should never happen with correct code).
 pub fn main() -> eyre::Result<()> {
     // Install color_eyre for better error reports
     color_eyre::install()?;
 
-    // Parse command line arguments
-    let cli = Cli::command();
-    let cli = Cli::from_arg_matches(&cli.get_matches())?;
+    // Parse command line arguments using figue
+    // unwrap() is figue's intended CLI entry behavior:
+    // it exits with proper codes for --help/--version/completions/parse-errors.
+    let cli: Cli = figue::Driver::new(
+        figue::builder::<Cli>()
+            .expect("schema should be valid")
+            .cli(move |cli| cli.args_os(std::env::args_os().skip(1)).strict())
+            .help(move |help| {
+                help.version(VERSION)
+                    .include_implementation_source_file(true)
+                    .include_implementation_git_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))
+            })
+            .build(),
+    )
+    .run()
+    .unwrap();
 
     // Initialize logging
-    logging::init_logging(&cli.global_args.logging_config()?)?;
+    logging_init::init_logging(&cli.global_args)?;
 
     #[cfg(windows)]
     {

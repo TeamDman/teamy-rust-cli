@@ -29,12 +29,13 @@ teamy-rust-cli on  main [!] is 📦 v0.2.0 via 🦀 v1.94.0-nightly
 │  ├── cli # CLI holder
 │  │  ├── cache
 │  │  │  ├── clean # my-app cache clean
-│  │  │  └── path
-│  │  │     └── show # my-app cache path show
+│  │  │  └── show # my-app cache show
+│  │  ├── docs
+│  │  │  ├── show # my-app docs show
+│  │  │  └── write # my-app docs write docs/
 │  │  ├── global_args.rs # Arguments that are applicable to all commands
 │  │  └── home
-│  │     └── path
-│  │        └── show # my-app home path show
+│  │     └── show # my-app home show
 │  ├── lib.rs # Entrypoint
 │  ├── logging
 │  │  ├── logging_config.rs # Configure object holds tracing filter and optional json output file
@@ -47,3 +48,24 @@ teamy-rust-cli on  main [!] is 📦 v0.2.0 via 🦀 v1.94.0-nightly
 │  └── cli_fuzzing.rs # Round-trip testing for Cli arbitrary implementation
 └── update.ps1 # Convenience: cargo install --path .
 ```
+
+Generate command help snapshots from the current CLI shape:
+
+```shell
+teamy-rust-cli.exe docs write docs/
+teamy-rust-cli.exe docs show
+```
+
+`docs write docs/` writes `docs/command-help/*.txt` (one file per command path, plus root help).
+
+## TODO
+
+Some stuff can/should probably be upstreamed into a a figue fork.
+
+- `--help` giving the path of the command handler's implementation file
+- `help` being accepted the same as `--help` for commands
+- `--help` including alternate commands
+- `ToArgs` trait and auto-implementation using facet SHAPE
+- tests using the arbitrary implementation for the cli types that generate random commands and call toargs and parse to ensure equality
+- `--help` including the URL of the permalink on github for this git revision of the command handler file
+- include examples of how to use `ToArgs` to print a recommended command. E.g., "This command failed because you have to run `{}` first"

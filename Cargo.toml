@@ -14,16 +14,23 @@ documentation = "https://github.com/TeamDman/teamy-rust-cli" # "https://docs.rs/
 [dependencies]
 arbitrary = { version = "1.4.1", features = ["derive"] }
 chrono = "0.4"
-clap = { version = "4.5.43", features = ["derive"] }
 color-eyre = "0.6.5"
 eyre = "0.6.12"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
+tracing-tracy = { version = "0.11", optional = true }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
+facet = "0.44.1"
+figue = { git = "https://github.com/TeamDman/figue", rev = "614af4ce3e42d8a64fce47730fa39034cad2de23", features = ["arbitrary"] }
+open = "5"
 
 [target.'cfg(windows)'.dependencies]
 teamy-windows = "0.9.0"
+
+[features]
+default = []
+tracy = ["dep:tracing-tracy"]
 
 [build-dependencies]
 embed-resource = "3.0.6"
@@ -55,7 +62,7 @@ as_pointer_underscore = "warn"
 assertions_on_result_states = "warn"
 clone_on_ref_ptr = "warn"
 deref_by_slicing = "warn"
-disallowed_script_idents = "warn"
+disallowed_script_idents = "allow" # facet macros use Unicode identifiers
 empty_drop = "warn"
 empty_enum_variants_with_brackets = "warn"
 empty_structs_with_brackets = "warn"
