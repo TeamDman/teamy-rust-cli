@@ -32,7 +32,7 @@ impl CacheHome {
         if let Ok(override_dir) = std::env::var(super::APP_CACHE_ENV_VAR) {
             return Ok(CacheHome(PathBuf::from(override_dir)));
         }
-        if let Some(project_dirs) = ProjectDirs::from("", "teamdman", super::APP_CACHE_DIR_NAME) {
+        if let Some(project_dirs) = ProjectDirs::from("", "TeamDman", super::APP_CACHE_DIR_NAME) {
             Ok(CacheHome(project_dirs.cache_dir().to_path_buf()))
         } else {
             bail!("Could not determine cache directory")
