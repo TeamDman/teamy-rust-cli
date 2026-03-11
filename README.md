@@ -57,15 +57,3 @@ teamy-rust-cli.exe docs show
 ```
 
 `docs write docs/` writes `docs/command-help/*.txt` (one file per command path, plus root help).
-
-## TODO
-
-Some stuff can/should probably be upstreamed into a a figue fork.
-
-- `--help` giving the path of the command handler's implementation file
-- `help` being accepted the same as `--help` for commands
-- `--help` including alternate commands
-- `ToArgs` trait and auto-implementation using facet SHAPE
-- tests using the arbitrary implementation for the cli types that generate random commands and call toargs and parse to ensure equality
-- `--help` including the URL of the permalink on github for this git revision of the command handler file
-- include examples of how to use `ToArgs` to print a recommended command. E.g., "This command failed because you have to run `{}` first"
