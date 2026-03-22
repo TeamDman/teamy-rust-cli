@@ -25,6 +25,17 @@ const VERSION: &str = concat!(
 ///
 /// Panics if the CLI schema is invalid (should never happen with correct code).
 pub fn main() -> eyre::Result<()> {
+    #[cfg(windows)]
+    {
+        // Enable ANSI support on Windows
+        // This fails in a pipe scenario, so we ignore the error
+        let _ = teamy_windows::console::enable_ansi_support();
+
+        // Warn if UTF-8 is not enabled on Windows
+        #[cfg(windows)]
+        teamy_windows::string::warn_if_utf8_not_enabled();
+    };
+
     // Install color_eyre for better error reports
     color_eyre::install()?;
 
@@ -47,17 +58,6 @@ pub fn main() -> eyre::Result<()> {
 
     // Initialize logging
     logging_init::init_logging(&cli.global_args)?;
-
-    #[cfg(windows)]
-    {
-        // Enable ANSI support on Windows
-        // This fails in a pipe scenario, so we ignore the error
-        let _ = teamy_windows::console::enable_ansi_support();
-
-        // Warn if UTF-8 is not enabled on Windows
-        #[cfg(windows)]
-        teamy_windows::string::warn_if_utf8_not_enabled();
-    };
 
     // Invoke whatever command was requested
     cli.invoke()?;
