@@ -47,6 +47,7 @@ pub fn main() -> eyre::Result<()> {
             .expect("schema should be valid")
             .cli(move |cli| cli.args_os(std::env::args_os().skip(1)).strict())
             .help(move |help| {
+                // TODO(template): replace the implementation git URL with the generated repository path.
                 help.version(VERSION)
                     .include_implementation_source_file(true)
                     .include_implementation_git_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))

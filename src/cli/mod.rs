@@ -13,6 +13,14 @@ use figue::FigueBuiltins;
 use figue::{self as args};
 
 /// A demonstration command line utility.
+///
+/// TODO(template): replace this top-level CLI description with the generated project's real behavior.
+///
+/// Environment variables:
+/// TODO(template): replace the environment variable names below with project-specific names.
+/// - `APP_HOME_DIR` overrides the resolved application home directory.
+/// - `APP_CACHE_DIR` overrides the resolved cache directory.
+/// - `RUST_LOG` provides a tracing filter when `--log-filter` is omitted.
 #[derive(Facet, Arbitrary, Debug)]
 pub struct Cli {
     /// Global arguments (`debug`, `log_filter`, `log_file`).
@@ -51,6 +59,8 @@ impl Cli {
 }
 
 /// A demonstration command line utility.
+///
+/// TODO(template): replace these example command groups with the generated project's actual command surface.
 #[derive(Facet, Arbitrary, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Command {

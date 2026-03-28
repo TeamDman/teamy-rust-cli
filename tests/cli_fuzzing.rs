@@ -1,5 +1,6 @@
 //! CLI fuzzing tests using figue's arbitrary helper assertions.
 
+// TODO(template): rename the crate path below after copying the template into a real project.
 use teamy_rust_cli::cli::Cli;
 
 #[test]

@@ -1,47 +1,108 @@
 # Teamy Rust CLI
 
-Opinionated starting point for building small/medium Rust command line applications.
+<!-- TODO(template): replace this README with project-specific documentation after copying the template. -->
 
-## Getting Started
+[![crates.io](https://img.shields.io/crates/v/teamy-rust-cli.svg)](https://crates.io/crates/teamy-rust-cli)
+[![license](https://img.shields.io/crates/l/teamy-rust-cli.svg)](https://crates.io/crates/teamy-rust-cli)
 
-Everything but this README.md file and the LICENSE file can be copied to a new project to get off the ground easily.
+![Teamy Rust CLI media demo](resources/main.png)
 
-```shell
-teamy-rust-cli on  main [!] is 📦 v0.2.0 via 🦀 v1.94.0-nightly 
-❯ ls --tree --git-ignore
+Opinionated starting point for building small and medium Rust command line applications.
+
+## What This Template Gives You
+
+This template exists to remove the repeated setup work for a new CLI project. It ships with:
+
+- `figue` + `facet` based argument parsing
+- `--help` and `--version` support, including git revision in version output
+- structured logging to stderr with optional NDJSON log files
+- Windows app resources wired through `build.rs`
+- CLI roundtrip fuzz tests
+- tracey specification scaffolding under `.config/tracey` and `docs/spec`
+- PowerShell helpers for initializing a new repository and running the full quality gate
+
+## Quick Start
+
+Copy the template into another repository:
+
+```powershell
+./init-other-repo.ps1 ../my-new-cli
+```
+
+Then update the obvious placeholders in the destination repository:
+
+- package metadata in `Cargo.toml`
+- environment variable names in `src/paths/mod.rs`
+- repository URL in `src/lib.rs`
+- README text and examples
+
+## Example Usage
+
+Inspect the generated CLI surface:
+
+```powershell
+cargo run -- --help
+```
+
+Show the resolved application home directory:
+
+```powershell
+cargo run -- home show
+```
+
+Show the resolved cache directory:
+
+```powershell
+cargo run -- cache show
+```
+
+Write structured logs to disk while still logging to stderr:
+
+```powershell
+cargo run -- --log-file .\logs home show
+```
+
+## Environment Variables
+
+<!-- TODO(template): replace the environment variable names below with project-specific names. -->
+
+The template currently recognizes these environment variables:
+
+- `APP_HOME_DIR`: overrides the resolved application home directory
+- `APP_CACHE_DIR`: overrides the resolved cache directory
+- `RUST_LOG`: provides a tracing filter when `--log-filter` is not supplied
+
+These names are placeholders and should be renamed in the generated project.
+
+## Quality Gate
+
+Run the standard validation flow with:
+
+```powershell
+./check-all.ps1
+```
+
+That script runs formatting, clippy, build, tests, and local tracey validation.
+
+For Tracy profiling, run:
+
+```powershell
+./run-tracing.ps1 home show
+```
+
+<!-- TODO(template): update the example profiling command above to match the generated project's command surface. -->
+
+## Repository Layout
+
+```text
 . # Some files omitted
-├── build.rs # Adds exe resources (icon, manifest) and git revision
-├── Cargo.lock # Pins exact version info for crates, no special behaviour
-├── Cargo.toml # Lint rules, includes dependency for build.rs
-├── check-all.ps1 # Formatting, pedantic linting, build checking
-├── clippy.toml # Forbidding undesired method and macro usage
-├── LICENSE # The license for this template, do not clobber destination if exists when applying template
-├── README.md # This file :D
-├── resources # build.rs uses when creating .exe
-│  ├── app.manifest # Can be necessary when using specific windows controls
-│  ├── app.rc # Declare resources to be bundled in .exe like icons
-│  ├── main.ico # Icon file
-│  ├── main.png # Original icon image
-│  ├── make-all-icons.ps1 # Builds all declared images into .ico files
-│  └── make-icon.ps1 # Helper fn script for above
-├── rustfmt.toml # Opinionated formatting rules
+├── .config/tracey/config.styx # Local tracey specification wiring
+├── build.rs # Adds exe resources and embeds git revision
+├── Cargo.toml # Package metadata, dependencies, lint policy
+├── check-all.ps1 # Formatting, linting, build, tests, tracey validation
+├── docs/spec # Human-readable requirements for the repository and CLI
+├── resources # Windows resources used by build.rs
 ├── src # Rust source code
-│  ├── cli # CLI holder
-│  │  ├── cache
-│  │  │  ├── clean # my-app cache clean
-│  │  │  └── show # my-app cache show
-│  │  ├── global_args.rs # Arguments that are applicable to all commands
-│  │  └── home
-│  │     └── show # my-app home show
-│  ├── lib.rs # Entrypoint
-│  ├── logging
-│  │  ├── logging_config.rs # Configure object holds tracing filter and optional json output file
-│  │  └── logging_init.rs # Initialize tracing
-│  ├── main.rs # CLI entrypoint calls lib.rs#main
-│  └── paths
-│     ├── app_home.rs # Helper gives dir to put roaming data; configs, preferences
-│     └── cache.rs # Helper gives dir to put local data; cached operation outputs, downloads
-├── tests
-│  └── cli_fuzzing.rs # Round-trip testing for Cli arbitrary implementation
-└── update.ps1 # Convenience: cargo install --path .
+├── tests # CLI roundtrip fuzz tests
+└── update.ps1 # Convenience install helper
 ```

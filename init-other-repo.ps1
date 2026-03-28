@@ -25,12 +25,20 @@ if (-not (Test-Path -LiteralPath $destinationRepoPath -PathType Container)) {
 
 $excludedDirectories = @(
 	(Join-Path -Path $sourceRepoPath -ChildPath '.git'),
-	(Join-Path -Path $sourceRepoPath -ChildPath 'target')
+	(Join-Path -Path $sourceRepoPath -ChildPath 'target'),
+	(Join-Path -Path $sourceRepoPath -ChildPath 'docs\spec\template')
 )
 
 $excludedFiles = @(
 	(Join-Path -Path $sourceRepoPath -ChildPath 'init-other-repo.ps1')
 )
+
+foreach ($topLevelFile in @('LICENSE', 'README.md')) {
+	$destinationFilePath = Join-Path -Path $destinationRepoPath -ChildPath $topLevelFile
+	if (Test-Path -LiteralPath $destinationFilePath -PathType Leaf) {
+		$excludedFiles += Join-Path -Path $sourceRepoPath -ChildPath $topLevelFile
+	}
+}
 
 Write-Verbose "Source: $sourceRepoPath"
 Write-Verbose "Destination: $destinationRepoPath"
@@ -43,6 +51,17 @@ Write-Output "Copying template files from '$sourceRepoPath' to '$destinationRepo
 # /XF : exclude files from the copy operation.
 & robocopy $sourceRepoPath $destinationRepoPath /E /XD $excludedDirectories /XF $excludedFiles
 $robocopyExitCode = $LASTEXITCODE
+
+$destinationTraceyConfigPath = Join-Path -Path $destinationRepoPath -ChildPath '.config\tracey\config.styx'
+if (Test-Path -LiteralPath $destinationTraceyConfigPath -PathType Leaf) {
+	$traceyConfigText = Get-Content -LiteralPath $destinationTraceyConfigPath -Raw
+	$traceyConfigText = [Regex]::Replace(
+		$traceyConfigText,
+		'(?s)\s*// template-only-spec:start.*?// template-only-spec:end',
+		''
+	)
+	Set-Content -LiteralPath $destinationTraceyConfigPath -Value $traceyConfigText
+}
 
 $robocopyExitCodeTable = [ordered]@{
 	0  = 'No files were copied. No failures occurred. No files were mismatched.'

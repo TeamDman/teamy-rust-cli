@@ -1,0 +1,73 @@
+// repo[impl tracey.specification.present]
+@schema {id crate:tracey-config@1, cli tracey}
+
+specs (
+    // TODO(template): replace these spec ids when copying the template into a real project.
+    // template-only-spec:start
+    {
+        name teamy-rust-cli-template-rules
+        source_url https://github.com/TeamDman/teamy-rust-cli
+        include (docs/spec/template/**/*.md)
+        impls (
+            {
+                name repo
+                include_plain (
+                    Cargo.toml
+                    README.md
+                    check-all.ps1
+                    init-other-repo.ps1
+                    run-tracing.ps1
+                    .config/tracey/config.styx
+                    docs/spec/product/cli.md
+                    docs/spec/repo/publishing-standards.md
+                    docs/spec/tools/tool-standards.md
+                    src/lib.rs
+                    src/main.rs
+                    src/paths/mod.rs
+                    tests/cli_fuzzing.rs
+                )
+            }
+        )
+    }
+    // template-only-spec:end
+    {
+        name teamy-rust-cli-publishing-standards
+        source_url https://github.com/TeamDman/teamy-rust-cli
+        include (docs/spec/repo/**/*.md)
+        impls (
+            {
+                name repo
+                include_plain (
+                    README.md
+                    Cargo.toml
+                    LICENSE
+                    .config/tracey/config.styx
+                )
+            }
+        )
+    }
+    {
+        name teamy-rust-cli-tool-standards
+        source_url https://github.com/TeamDman/teamy-rust-cli
+        include (docs/spec/tools/**/*.md)
+        impls (
+            {
+                name rust
+                include (src/**/*.rs)
+                test_include (tests/**/*.rs)
+            }
+        )
+    }
+    {
+        name teamy-rust-cli-cli
+        source_url https://github.com/TeamDman/teamy-rust-cli
+        include (docs/spec/product/cli.md)
+        impls (
+            {
+                name rust
+                include (src/**/*.rs)
+                test_include (tests/**/*.rs)
+            }
+        )
+    }
+)

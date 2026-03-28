@@ -32,6 +32,7 @@ impl CacheHome {
         if let Ok(override_dir) = std::env::var(super::APP_CACHE_ENV_VAR) {
             return Ok(CacheHome(PathBuf::from(override_dir)));
         }
+        // TODO(template): replace the organization name below if the generated project uses a different owner.
         if let Some(project_dirs) = ProjectDirs::from("", "TeamDman", super::APP_CACHE_DIR_NAME) {
             Ok(CacheHome(project_dirs.cache_dir().to_path_buf()))
         } else {

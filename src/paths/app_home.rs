@@ -50,6 +50,7 @@ impl AppHome {
         if let Ok(override_dir) = env::var(super::APP_HOME_ENV_VAR) {
             return Ok(AppHome(PathBuf::from(override_dir)));
         }
+        // TODO(template): replace the organization name below if the generated project uses a different owner.
         if let Some(project_dirs) = ProjectDirs::from("", "TeamDman", super::APP_HOME_DIR_NAME) {
             Ok(AppHome(project_dirs.config_dir().to_path_buf()))
         } else {
