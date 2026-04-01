@@ -1151,9 +1151,9 @@ dependencies = [
 
 [[package]]
 name = "teamy-figue"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d01850a04c8aeb4535b44870cf7de2ff17de883d8cff17a2908f010945adacec"
+checksum = "8e24674e32ea30c8663657a7fb66f98b3c3c5bfaaaf585dfc14155edcd0386c2"
 dependencies = [
  "arbitrary",
  "ariadne",
@@ -1170,6 +1170,7 @@ dependencies = [
  "indexmap",
  "owo-colors",
  "rand",
+ "rand_chacha",
  "strip-ansi-escapes",
  "strsim",
  "supports-color 3.0.2",
