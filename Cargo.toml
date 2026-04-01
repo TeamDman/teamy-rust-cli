@@ -23,7 +23,7 @@ tracing-tracy = { version = "0.11", optional = true }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
 facet = "0.44.1"
-figue = { git = "https://github.com/TeamDman/figue", rev = "0e82172c21e9ce0ecc4521ff01f6dbf56342867f", features = ["arbitrary"] }
+figue = { package = "teamy-figue", version = "2.0.0", features = ["arbitrary"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]

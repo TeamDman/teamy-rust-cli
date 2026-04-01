@@ -5,11 +5,16 @@ use teamy_rust_cli::cli::Cli;
 
 #[test]
 fn fuzz_cli_args_consistency() {
-    figue::assert_to_args_consistency::<Cli>(5000)
-        .expect("figue helper consistency check should pass");
+    if let Err(e) =
+        figue::assert_to_args_consistency::<Cli>(figue::TestToArgsConsistencyConfig::default())
+    {
+        panic!("CLI argument consistency check failed:\n{e}")
+    };
 }
 
 #[test]
 fn fuzz_cli_args_roundtrip() {
-    figue::assert_to_args_roundtrip::<Cli>(500).expect("figue helper roundtrip check should pass");
+    if let Err(e) = figue::assert_to_args_roundtrip::<Cli>(figue::TestToArgsRoundTrip::default()) {
+        panic!("CLI argument roundtrip check failed:\n{e}")
+    };
 }
