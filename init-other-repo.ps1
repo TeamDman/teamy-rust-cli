@@ -26,7 +26,8 @@ if (-not (Test-Path -LiteralPath $destinationRepoPath -PathType Container)) {
 $excludedDirectories = @(
 	(Join-Path -Path $sourceRepoPath -ChildPath '.git'),
 	(Join-Path -Path $sourceRepoPath -ChildPath 'target'),
-	(Join-Path -Path $sourceRepoPath -ChildPath 'docs\spec\template')
+	(Join-Path -Path $sourceRepoPath -ChildPath 'docs\spec\template'),
+	(Join-Path -Path $sourceRepoPath -ChildPath '.github\skills\initialize-from-teamy-rust-cli')
 )
 
 $excludedFiles = @(

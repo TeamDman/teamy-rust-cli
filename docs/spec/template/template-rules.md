@@ -13,6 +13,9 @@ The init helper must not copy `init-other-repo.ps1` into the destination reposit
 template[init-script.omits-template-only-spec]
 The init helper must omit template-only specification files from the destination repository.
 
+template[init-script.omits-template-only-skills]
+The init helper must omit template-only internal skills such as `.github/skills/initialize-from-teamy-rust-cli` from the destination repository.
+
 template[init-script.removes-template-only-config]
 The init helper must remove template-only spec wiring from the copied `.config/tracey/config.styx` file in the destination repository.
 
