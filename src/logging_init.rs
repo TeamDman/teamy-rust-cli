@@ -67,7 +67,7 @@ pub fn init_logging(global_args: &GlobalArgs) -> eyre::Result<()> {
         });
 
         let json_layer = tracing_subscriber::fmt::layer()
-            .event_format(tracing_subscriber::fmt::format().json())
+            .json()
             .with_file(true)
             .with_target(false)
             .with_line_number(true)
