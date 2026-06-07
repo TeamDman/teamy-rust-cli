@@ -19,7 +19,6 @@ This template exists to remove the repeated setup work for a new CLI project. It
 - structured logging to stderr with optional NDJSON log files
 - Windows app resources wired through `build.rs`
 - CLI roundtrip fuzz tests
-- tracey specification scaffolding under `.config/tracey` and `docs/spec`
 - PowerShell helpers for initializing a new repository and running the full quality gate
 
 ## Quick Start
@@ -97,12 +96,12 @@ Run the standard validation flow with:
 ./check-all.ps1
 ```
 
-That script runs formatting, linting, build, tests, and local tracey validation.
+That script runs formatting, linting, build, and tests
 
 For Tracy profiling, run:
 
 ```powershell
-./run-tracing.ps1 home show
+./run-profiler.ps1 home show
 ```
 
 <!-- TODO(template): update the example profiling command above to match the generated project's command surface. -->
@@ -111,11 +110,9 @@ For Tracy profiling, run:
 
 ```text
 . # Some files omitted
-├── .config/tracey/config.styx # Local tracey specification wiring
 ├── build.rs # Adds exe resources and embeds git revision
 ├── Cargo.toml # Package metadata, dependencies, lint policy
-├── check-all.ps1 # Formatting, linting, build, tests, tracey validation
-├── docs/spec # Human-readable requirements for the repository and CLI
+├── check-all.ps1 # Formatting, linting, build, tests
 ├── resources # Windows resources used by build.rs
 ├── src # Rust source code
 ├── tests # CLI roundtrip fuzz tests

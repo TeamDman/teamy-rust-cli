@@ -52,7 +52,3 @@ Invoke-Step -Label "tests" -Action {
 	$featuresArg = Get-NonTracyTestFeatureArgs
 	cargo test @featuresArg --quiet
 }
-
-Invoke-Step -Label "tracey validation" -Action {
-	tracey query validate --deny warnings
-}
