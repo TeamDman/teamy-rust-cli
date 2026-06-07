@@ -15,6 +15,17 @@ The `cache` command group must expose the `show`, `open`, and `clean` subcommand
 cli[command.surface.home]
 The `home` command group must expose the `show` and `open` subcommands.
 
+## Global Output
+
+cli[global.output-format]
+The CLI must expose a global `--output-format` option that accepts `text`, `json`, and `csv`.
+
+cli[global.output-format.default-terminal]
+If `--output-format` is omitted and stdout is an interactive terminal, structured command output must render as `text`.
+
+cli[global.output-format.default-redirected]
+If `--output-format` is omitted and stdout is redirected, structured command output must render as `json`.
+
 ## Parser Model
 
 cli[parser.args-consistent]

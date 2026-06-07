@@ -1,5 +1,6 @@
 //! Global arguments that apply to all commands.
 
+use crate::cli::output::OutputFormat;
 use arbitrary::Arbitrary;
 use facet::Facet;
 use figue::{self as args};
@@ -24,4 +25,11 @@ pub struct GlobalArgs {
     /// If omitted, no JSON log file is written.
     #[facet(args::named)]
     pub log_file: Option<String>,
+
+    /// Render command output as `text`, `json`, or `csv`.
+    ///
+    /// If omitted, the generated CLI uses `text` for interactive terminals and
+    /// `json` when stdout is redirected.
+    #[facet(args::named)]
+    pub output_format: Option<OutputFormat>,
 }

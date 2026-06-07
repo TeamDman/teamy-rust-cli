@@ -14,6 +14,7 @@ Opinionated starting point for building small and medium Rust command line appli
 This template exists to remove the repeated setup work for a new CLI project. It ships with:
 
 - `figue` + `facet` based argument parsing
+- top-level output rendering with `text`, `json`, and `csv` formats
 - `--help` and `--version` support, including git revision in version output
 - structured logging to stderr with optional NDJSON log files
 - Windows app resources wired through `build.rs`
@@ -50,6 +51,12 @@ Show the resolved application home directory:
 cargo run -- home show
 ```
 
+Render the same command as JSON:
+
+```powershell
+cargo run -- --output-format json home show
+```
+
 Show the resolved cache directory:
 
 ```powershell
@@ -62,6 +69,14 @@ Write structured logs to disk while still logging to stderr:
 cargo run -- --log-file .\logs home show
 ```
 
+## Command Output
+
+Commands that return structured data render through a shared top-level output layer.
+
+- Use `--output-format text`, `--output-format json`, or `--output-format csv` to choose the format explicitly.
+- If `--output-format` is omitted, the CLI defaults to `text` in an interactive terminal and `json` when stdout is redirected.
+- Commands that only perform side effects, such as `open` and `clean`, return no structured stdout payload.
+
 ## Environment Variables
 
 <!-- TODO(template): replace the environment variable names below with project-specific names. -->
@@ -69,7 +84,7 @@ cargo run -- --log-file .\logs home show
 The template currently recognizes these environment variables:
 
 - `APP_HOME_DIR`: overrides the resolved application home directory
-- `APP_CACHE_DIR`: overrides the resolved cache directory
+- `APP_CACHE_DIR`: overrides the platform-derived cache directory
 - `RUST_LOG`: provides a tracing filter when `--log-filter` is not supplied
 
 These names are placeholders and should be renamed in the generated project.
@@ -82,7 +97,7 @@ Run the standard validation flow with:
 ./check-all.ps1
 ```
 
-That script runs formatting, clippy, build, tests, and local tracey validation.
+That script runs formatting, linting, build, tests, and local tracey validation.
 
 For Tracy profiling, run:
 

@@ -22,8 +22,11 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 tracing-tracy = { version = "0.11", optional = true }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
-facet = "0.44.1"
-figue = { package = "teamy-figue", version = "2.0.1", features = ["arbitrary"] }
+facet = "=0.46.5"
+facet-csv = "=0.46.1"
+facet-json = "=0.46.1"
+facet-pretty = "=0.46.5"
+figue = { package = "teamy-figue", version = "=5.1.0", features = ["arbitrary"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]
@@ -78,3 +81,5 @@ unnecessary_safety_comment = "warn"
 unnecessary_safety_doc = "warn"
 unneeded_field_pattern = "warn"
 unused_result_ok = "warn"
+
+

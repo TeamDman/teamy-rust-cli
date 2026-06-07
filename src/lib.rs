@@ -19,7 +19,7 @@ const VERSION: &str = concat!(
 ///
 /// # Errors
 ///
-/// This function will return an error if `color_eyre` installation, CLI parsing, logging initialization, or command execution fails.
+/// This function will return an error if `color_eyre` installation, CLI parsing, logging initialization, command execution, or command output rendering fails.
 ///
 /// # Panics
 ///
@@ -60,7 +60,9 @@ pub fn main() -> eyre::Result<()> {
     // Initialize logging
     logging_init::init_logging(&cli.global_args)?;
 
-    // Invoke whatever command was requested
-    cli.invoke()?;
+    // Invoke whatever command was requested and render its output once at the top level
+    let requested_output_format = cli.global_args.output_format;
+    let output = cli.invoke()?;
+    output.emit(requested_output_format)?;
     Ok(())
 }

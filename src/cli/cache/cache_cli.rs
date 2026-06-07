@@ -1,6 +1,7 @@
 use crate::cli::cache::clean::CacheCleanArgs;
 use crate::cli::cache::open::CacheOpenArgs;
 use crate::cli::cache::show::CacheShowArgs;
+use crate::cli::output::CliOutput;
 use arbitrary::Arbitrary;
 use eyre::Result;
 use facet::Facet;
@@ -30,13 +31,11 @@ impl CacheArgs {
     /// # Errors
     ///
     /// This function will return an error if the subcommand fails.
-    pub async fn invoke(self) -> Result<()> {
+    pub async fn invoke(self) -> Result<CliOutput> {
         match self.command {
-            CacheCommand::Clean(args) => args.invoke().await?,
-            CacheCommand::Open(args) => args.invoke().await?,
-            CacheCommand::Show(args) => args.invoke().await?,
+            CacheCommand::Clean(args) => args.invoke().await,
+            CacheCommand::Open(args) => args.invoke().await,
+            CacheCommand::Show(args) => args.invoke().await,
         }
-
-        Ok(())
     }
 }

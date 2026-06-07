@@ -1,3 +1,4 @@
+use crate::cli::output::CliOutput;
 use arbitrary::Arbitrary;
 use eyre::Context;
 use eyre::Result;
@@ -13,7 +14,7 @@ impl HomeOpenArgs {
     /// This function will return an error if the home directory cannot be created
     /// or the file manager cannot be launched.
     #[expect(clippy::unused_async)]
-    pub async fn invoke(self) -> Result<()> {
+    pub async fn invoke(self) -> Result<CliOutput> {
         crate::paths::APP_HOME.ensure_dir()?;
         open::that_detached(crate::paths::APP_HOME.0.as_path()).wrap_err_with(|| {
             format!(
@@ -21,6 +22,6 @@ impl HomeOpenArgs {
                 crate::paths::APP_HOME.0.display()
             )
         })?;
-        Ok(())
+        Ok(CliOutput::none())
     }
 }

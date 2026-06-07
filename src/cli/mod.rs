@@ -2,10 +2,12 @@ pub mod cache;
 pub mod facet_shape;
 pub mod global_args;
 pub mod home;
+pub mod output;
 
 use crate::cli::cache::CacheArgs;
 use crate::cli::global_args::GlobalArgs;
 use crate::cli::home::HomeArgs;
+use crate::cli::output::CliOutput;
 use arbitrary::Arbitrary;
 use eyre::Context;
 use facet::Facet;
@@ -48,13 +50,12 @@ impl Cli {
     /// # Errors
     ///
     /// This function will return an error if the tokio runtime cannot be built or if the command fails.
-    pub fn invoke(self) -> eyre::Result<()> {
+    pub fn invoke(self) -> eyre::Result<CliOutput> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .wrap_err("Failed to build tokio runtime")?;
-        runtime.block_on(async move { self.command.invoke().await })?;
-        Ok(())
+        runtime.block_on(async move { self.command.invoke().await })
     }
 }
 
@@ -74,7 +75,7 @@ impl Command {
     /// # Errors
     ///
     /// This function will return an error if the subcommand fails.
-    pub async fn invoke(self) -> eyre::Result<()> {
+    pub async fn invoke(self) -> eyre::Result<CliOutput> {
         match self {
             Command::Cache(args) => args.invoke().await,
             Command::Home(args) => args.invoke().await,
