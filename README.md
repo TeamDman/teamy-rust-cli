@@ -15,7 +15,7 @@ This template exists to remove the repeated setup work for a new CLI project. It
 
 - `figue` + `facet` based argument parsing
 - top-level output rendering with `text`, `json`, and `csv` formats
-- `--help` and `--version` support, including git revision in version output
+- `--help` and `--version` support, including git revision and local-time build timestamp in version output
 - structured logging to stderr with optional NDJSON log files
 - Windows app resources wired through `build.rs`
 - CLI roundtrip fuzz tests
@@ -110,7 +110,7 @@ For Tracy profiling, run:
 
 ```text
 . # Some files omitted
-├── build.rs # Adds exe resources and embeds git revision
+├── build.rs # Adds exe resources and embeds git revision/build timestamp
 ├── Cargo.toml # Package metadata, dependencies, lint policy
 ├── check-all.ps1 # Formatting, linting, build, tests
 ├── resources # Windows resources used by build.rs

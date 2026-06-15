@@ -6,14 +6,30 @@ pub mod logging_init;
 pub mod paths;
 
 use crate::cli::Cli;
+use chrono::{DateTime, Local, Utc};
 
-/// Version string combining package version and git revision.
-const VERSION: &str = concat!(
-    env!("CARGO_PKG_VERSION"),
-    " (rev ",
-    env!("GIT_REVISION"),
-    ")"
-);
+/// Version string combining package version, git revision, and build time.
+fn version() -> String {
+    let built_at = option_env!("BUILD_TIMESTAMP_UNIX")
+        .and_then(|value| value.parse::<i64>().ok())
+        .and_then(|timestamp| DateTime::<Utc>::from_timestamp(timestamp, 0))
+        .map_or_else(
+            || "unknown build time".to_string(),
+            |timestamp| {
+                timestamp
+                    .with_timezone(&Local)
+                    .format("%Y-%m-%d %H:%M:%S %Z")
+                    .to_string()
+            },
+        );
+
+    format!(
+        "{} (rev {}, built {})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_REVISION"),
+        built_at,
+    )
+}
 
 /// Entrypoint for the program.
 ///
@@ -42,13 +58,15 @@ pub fn main() -> eyre::Result<()> {
     // Parse command line arguments using figue
     // unwrap() is figue's intended CLI entry behavior:
     // it exits with proper codes for --help/--version/completions/parse-errors.
+    let version = version();
+
     let cli: Cli = figue::Driver::new(
         figue::builder::<Cli>()
             .expect("schema should be valid")
             .cli(move |cli| cli.args_os(std::env::args_os().skip(1)).strict())
             .help(move |help| {
                 // TODO(template): replace the implementation git URL with the generated repository path.
-                help.version(VERSION)
+                help.version(version)
                     .include_implementation_source_file(true)
                     .include_implementation_git_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))
             })
