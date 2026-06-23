@@ -1,6 +1,7 @@
 #![deny(clippy::disallowed_methods)]
 #![deny(clippy::disallowed_macros)]
 
+pub mod cancellation;
 pub mod cli;
 pub mod logging_init;
 pub mod paths;
@@ -43,6 +44,7 @@ fn version() -> String {
 pub fn main() -> eyre::Result<()> {
     // Install color_eyre for better error reports
     color_eyre::install()?;
+    let cancellation_token = crate::cancellation::install_ctrlc_handler()?;
 
     #[cfg(windows)]
     {
@@ -76,11 +78,13 @@ pub fn main() -> eyre::Result<()> {
     .unwrap();
 
     // Initialize logging
-    logging_init::init_logging(&cli.global_args)?;
+    logging_init::init_logging(&cli.global_args, cancellation_token.clone())?;
 
     // Invoke whatever command was requested and render its output once at the top level
     let requested_output_format = cli.global_args.output_format;
-    let output = cli.invoke()?;
+    let output = cli.invoke(cancellation_token.clone())?;
+    cancellation_token.bail_if_cancelled()?;
     output.emit(requested_output_format)?;
+    cancellation_token.bail_if_cancelled()?;
     Ok(())
 }

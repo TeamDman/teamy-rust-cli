@@ -26,6 +26,10 @@ pub struct GlobalArgs {
     #[facet(args::named)]
     pub log_file: Option<String>,
 
+    /// Request graceful cancellation after the named tracing/Tracy span or log message is encountered.
+    #[facet(rename = "stop-after", default, args::named)]
+    pub stop_after: Option<String>,
+
     /// Render command output as `text`, `json`, or `csv`.
     ///
     /// If omitted, the generated CLI uses `text` for interactive terminals and

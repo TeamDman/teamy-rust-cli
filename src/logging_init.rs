@@ -1,3 +1,4 @@
+use crate::cancellation::CancellationToken;
 use crate::cli::global_args::GlobalArgs;
 use chrono::Local;
 use eyre::bail;
@@ -13,6 +14,8 @@ use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::util::SubscriberInitExt;
 
+mod stop_after_layer;
+
 /// Initialize logging based on the provided configuration.
 ///
 /// # Errors
@@ -22,7 +25,10 @@ use tracing_subscriber::util::SubscriberInitExt;
 /// # Panics
 ///
 /// This function may panic if locking or cloning the log file handle fails.
-pub fn init_logging(global_args: &GlobalArgs) -> eyre::Result<()> {
+pub fn init_logging(
+    global_args: &GlobalArgs,
+    cancellation_token: CancellationToken,
+) -> eyre::Result<()> {
     let subscriber = Registry::default();
 
     let env_filter_layer = EnvFilter::builder()
@@ -43,6 +49,10 @@ pub fn init_logging(global_args: &GlobalArgs) -> eyre::Result<()> {
         .pretty()
         .without_time();
     let subscriber = subscriber.with(stderr_layer);
+    let subscriber =
+        subscriber.with(global_args.stop_after.as_ref().map(|stop_after| {
+            stop_after_layer::StopAfterLayer::new(stop_after, cancellation_token)
+        }));
 
     let json_log_path = match global_args.log_file.as_ref() {
         None => None,

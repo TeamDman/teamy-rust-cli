@@ -4,6 +4,7 @@ pub mod global_args;
 pub mod home;
 pub mod output;
 
+use crate::cancellation::CancellationToken;
 use crate::cli::cache::CacheArgs;
 use crate::cli::global_args::GlobalArgs;
 use crate::cli::home::HomeArgs;
@@ -50,12 +51,12 @@ impl Cli {
     /// # Errors
     ///
     /// This function will return an error if the tokio runtime cannot be built or if the command fails.
-    pub fn invoke(self) -> eyre::Result<CliOutput> {
+    pub fn invoke(self, cancellation_token: CancellationToken) -> eyre::Result<CliOutput> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .wrap_err("Failed to build tokio runtime")?;
-        runtime.block_on(async move { self.command.invoke().await })
+        runtime.block_on(async move { self.command.invoke(cancellation_token).await })
     }
 }
 
@@ -75,7 +76,8 @@ impl Command {
     /// # Errors
     ///
     /// This function will return an error if the subcommand fails.
-    pub async fn invoke(self) -> eyre::Result<CliOutput> {
+    pub async fn invoke(self, cancellation_token: CancellationToken) -> eyre::Result<CliOutput> {
+        cancellation_token.bail_if_cancelled()?;
         match self {
             Command::Cache(args) => args.invoke().await,
             Command::Home(args) => args.invoke().await,

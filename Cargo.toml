@@ -16,6 +16,7 @@ documentation = "https://github.com/TeamDman/teamy-rust-cli" # "https://docs.rs/
 arbitrary = { version = "1.4.1", features = ["derive"] }
 chrono = "0.4"
 color-eyre = "0.6.5"
+ctrlc = "3.5.1"
 eyre = "0.6.12"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
