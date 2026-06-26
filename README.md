@@ -1,11 +1,13 @@
 # Teamy Rust CLI
 
+
 <!-- TODO(template): replace this README with project-specific documentation after copying the template. -->
 
 [![crates.io](https://img.shields.io/crates/v/teamy-rust-cli.svg)](https://crates.io/crates/teamy-rust-cli)
 [![license](https://img.shields.io/crates/l/teamy-rust-cli.svg)](https://crates.io/crates/teamy-rust-cli)
 
-![Teamy Rust CLI media demo](resources/main.png)
+
+<image height="100" src="./resources/main.png"/>
 
 Opinionated starting point for building small and medium Rust command line applications.
 
@@ -15,18 +17,20 @@ This template exists to remove the repeated setup work for a new CLI project. It
 
 - `figue` + `facet` based argument parsing
 - top-level output rendering with `text`, `json`, and `csv` formats
-- `--help` and `--version` support, including git revision and local-time build timestamp in version output
+- `--help` and `--version` support, including git repository URL, branch, revision, worktree status, and local-time build timestamp in version output
 - structured logging to stderr with optional NDJSON log files
 - Windows app resources wired through `build.rs`
 - CLI roundtrip fuzz tests
-- PowerShell helpers for initializing a new repository and running the full quality gate
+- `init` scaffolding command for creating new Teamy Rust CLI repositories
+- PowerShell helpers for running the full quality gate and temporarily supporting the legacy initializer
+- cooperative cancellation helpers from `teamy-cancellation`
 
 ## Quick Start
 
-Copy the template into another repository:
+Scaffold the template into another repository:
 
 ```powershell
-./init-other-repo.ps1 ../my-new-cli
+cargo run -- init ../my-new-cli
 ```
 
 Then update the obvious placeholders in the destination repository:
@@ -35,6 +39,19 @@ Then update the obvious placeholders in the destination repository:
 - environment variable names in `src/paths/mod.rs`
 - repository URL in `src/lib.rs`
 - README text and examples
+
+The initializer creates the destination directory if needed, excludes `.git`,
+`target`, the template initialization skill, and the legacy `init-other-repo.ps1`
+script, and preserves an existing destination `README.md` or `LICENSE`.
+Existing generated files are not overwritten unless `--force` is passed:
+
+```powershell
+cargo run -- init ../my-existing-cli --force
+```
+
+For transition, `init-other-repo.ps1` remains in this repository as a
+compatibility entrypoint, but new documentation and automation should use
+`teamy-rust-cli init`.
 
 ## Example Usage
 
@@ -110,9 +127,10 @@ For Tracy profiling, run:
 
 ```text
 . # Some files omitted
-├── build.rs # Adds exe resources and embeds git revision/build timestamp
+├── build.rs # Adds exe resources and embeds git repository/build metadata
 ├── Cargo.toml # Package metadata, dependencies, lint policy
 ├── check-all.ps1 # Formatting, linting, build, tests
+├── init-other-repo.ps1 # Legacy initializer kept temporarily during CLI migration
 ├── resources # Windows resources used by build.rs
 ├── src # Rust source code
 ├── tests # CLI roundtrip fuzz tests
