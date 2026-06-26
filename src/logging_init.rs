@@ -14,8 +14,6 @@ use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::util::SubscriberInitExt;
 
-mod stop_after_layer;
-
 /// Initialize logging based on the provided configuration.
 ///
 /// # Errors
@@ -49,10 +47,9 @@ pub fn init_logging(
         .pretty()
         .without_time();
     let subscriber = subscriber.with(stderr_layer);
-    let subscriber =
-        subscriber.with(global_args.stop_after.as_ref().map(|stop_after| {
-            stop_after_layer::StopAfterLayer::new(stop_after, cancellation_token)
-        }));
+    let subscriber = subscriber.with(global_args.stop_after.as_ref().map(|stop_after| {
+        crate::cancellation::StopAfterLayer::new(stop_after, cancellation_token)
+    }));
 
     let json_log_path = match global_args.log_file.as_ref() {
         None => None,

@@ -1362,6 +1362,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "teamy-cancellation"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29647cb8c7d3429679a433a1caa3c799aed2a49bf6415d95fdc4d3404487dde9"
+dependencies = [
+ "ctrlc",
+ "eyre",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "teamy-figue"
 version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1406,7 +1418,6 @@ dependencies = [
  "arbitrary",
  "chrono",
  "color-eyre",
- "ctrlc",
  "directories-next",
  "embed-resource",
  "eyre",
@@ -1415,6 +1426,7 @@ dependencies = [
  "facet-json",
  "facet-pretty",
  "open",
+ "teamy-cancellation",
  "teamy-figue",
  "teamy-windows",
  "tokio",
