@@ -42,6 +42,7 @@ embed-resource = "3.0.6"
 
 [lints.rust]
 ambiguous_negative_literals = "warn"
+unfulfilled_lint_expectations = "deny"
 missing_debug_implementations = "warn"
 redundant_imports = "warn"
 redundant_lifetimes = "warn"
@@ -62,7 +63,7 @@ multiple_crate_versions = "allow" # turn this off periodically to see how bad it
 multiple_unsafe_ops_per_block = "deny"
 module_inception = "allow"
 allow_attributes = "deny"
-# allow_attributes_without_reason = "warn"
+allow_attributes_without_reason = "warn"
 as_pointer_underscore = "warn"
 assertions_on_result_states = "warn"
 clone_on_ref_ptr = "warn"
