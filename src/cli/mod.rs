@@ -2,12 +2,14 @@ pub mod cache;
 pub mod facet_shape;
 pub mod global_args;
 pub mod home;
+pub mod init;
 pub mod output;
 
 use crate::cancellation::CancellationToken;
 use crate::cli::cache::CacheArgs;
 use crate::cli::global_args::GlobalArgs;
 use crate::cli::home::HomeArgs;
+use crate::cli::init::InitArgs;
 use crate::cli::output::CliOutput;
 use arbitrary::Arbitrary;
 use eyre::Context;
@@ -70,6 +72,8 @@ pub enum Command {
     Cache(CacheArgs),
     /// Home-related commands.
     Home(HomeArgs),
+    /// Scaffold a new Teamy Rust CLI repository.
+    Init(InitArgs),
 }
 
 impl Command {
@@ -81,6 +85,7 @@ impl Command {
         match self {
             Command::Cache(args) => args.invoke().await,
             Command::Home(args) => args.invoke().await,
+            Command::Init(args) => args.invoke().await,
         }
     }
 }
