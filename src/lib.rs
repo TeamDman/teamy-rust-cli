@@ -7,9 +7,11 @@ pub mod logging_init;
 pub mod paths;
 
 use crate::cli::Cli;
-use chrono::{DateTime, Local, Utc};
+use chrono::DateTime;
+use chrono::Local;
+use chrono::Utc;
 
-/// Version string combining package version, git revision, and build time.
+/// Version string combining package version, git repository metadata, and build time.
 fn version() -> String {
     let built_at = option_env!("BUILD_TIMESTAMP_UNIX")
         .and_then(|value| value.parse::<i64>().ok())
@@ -25,9 +27,12 @@ fn version() -> String {
         );
 
     format!(
-        "{} (rev {}, built {})",
+        "{} (repo {}, branch {}, rev {}, worktree {}, built {})",
         env!("CARGO_PKG_VERSION"),
+        env!("GIT_REPOSITORY_URL"),
+        env!("GIT_BRANCH"),
         env!("GIT_REVISION"),
+        env!("GIT_WORKTREE_STATUS"),
         built_at,
     )
 }
@@ -44,7 +49,7 @@ fn version() -> String {
 pub fn main() -> eyre::Result<()> {
     // Install color_eyre for better error reports
     color_eyre::install()?;
-    let cancellation_token = crate::cancellation::install_ctrlc_handler()?;
+    let cancellation_token = crate::cancellation::CtrlCHandler::default().install()?;
 
     #[cfg(windows)]
     {
