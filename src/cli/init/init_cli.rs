@@ -55,7 +55,10 @@ impl InitArgs {
     /// # Errors
     ///
     /// This function will return an error if the template cannot be copied, or if destination files would be overwritten without `--force`.
-    #[expect(clippy::unused_async)]
+    #[expect(
+        clippy::unused_async,
+        reason = "command invoke methods share the async CLI dispatch shape"
+    )]
     pub async fn invoke(self) -> Result<CliOutput> {
         let source = Path::new(env!("CARGO_MANIFEST_DIR"));
         let destination = resolve_destination_path(&self.destination)?;
@@ -175,7 +178,10 @@ fn build_copy_plan(source: &Path, destination: &Path, force: bool) -> Result<Cop
     })
 }
 
-#[expect(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "recursive copy planning carries shared accumulators explicitly"
+)]
 fn collect_copy_plan(
     root: &Path,
     current: &Path,
