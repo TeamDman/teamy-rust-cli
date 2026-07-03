@@ -77,7 +77,7 @@ pub fn main() -> eyre::Result<()> {
                 // TODO(template): replace the implementation git URL with the generated repository path.
                 help.version(version)
                     .include_implementation_source_file(true)
-                    .include_implementation_git_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))
+                    .include_implementation_github_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))
             })
             .build(),
     )

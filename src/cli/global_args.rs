@@ -15,6 +15,7 @@ pub struct GlobalArgs {
 
     /// Log level filter directive.
     #[facet(args::named)]
+    #[arbitrary(default)]
     pub log_filter: Option<String>,
 
     /// Write structured ndjson logs.
@@ -24,10 +25,12 @@ pub struct GlobalArgs {
     /// is generated in that directory.
     /// If omitted, no JSON log file is written.
     #[facet(args::named)]
+    #[arbitrary(default)]
     pub log_file: Option<String>,
 
     /// Request graceful cancellation after the named tracing/Tracy span or log message is encountered.
     #[facet(rename = "stop-after", default, args::named)]
+    #[arbitrary(default)]
     pub stop_after: Option<String>,
 
     /// Render command output as `text`, `json`, or `csv`.
@@ -35,5 +38,6 @@ pub struct GlobalArgs {
     /// If omitted, the generated CLI uses `text` for interactive terminals and
     /// `json` when stdout is redirected.
     #[facet(args::named)]
+    #[arbitrary(default)]
     pub output_format: Option<OutputFormat>,
 }

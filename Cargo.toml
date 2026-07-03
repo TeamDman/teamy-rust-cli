@@ -23,11 +23,11 @@ tracing-tracy = { version = "0.11", optional = true, default-features = false, f
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
 teamy-cancellation = "=0.2.0"
-facet = "=0.46.5"
-facet-csv = "=0.46.1"
-facet-json = "=0.46.1"
-facet-pretty = "=0.46.5"
-figue = { package = "teamy-figue", version = "=5.1.0", features = ["arbitrary"] }
+facet = { git = "https://github.com/TeamDman/facet.git", rev = "d0c3140ec6683f80249d50d74fa073911e0dfeb9", package = "facet", features = ["uuid", "compact_str", "chrono", "net"] }
+facet-csv = { git = "https://github.com/TeamDman/facet.git", rev = "d0c3140ec6683f80249d50d74fa073911e0dfeb9", package = "facet-csv" }
+facet-json = { git = "https://github.com/TeamDman/facet.git", rev = "d0c3140ec6683f80249d50d74fa073911e0dfeb9", package = "facet-json" }
+facet-pretty = { git = "https://github.com/TeamDman/facet.git", rev = "d0c3140ec6683f80249d50d74fa073911e0dfeb9", package = "facet-pretty" }
+figue = { git = "https://github.com/TeamDman/facet.git", rev = "d0c3140ec6683f80249d50d74fa073911e0dfeb9", package = "figue", features = ["arbitrary"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]
