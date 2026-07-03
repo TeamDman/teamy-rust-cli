@@ -19,7 +19,7 @@ color-eyre = "0.6.5"
 eyre = "0.6.12"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
-tracing-tracy = { version = "0.11", optional = true }
+tracing-tracy = { version = "0.11", optional = true, default-features = false, features = ["enable", "system-tracing", "context-switch-tracing", "sampling", "code-transfer", "callstack-inlines", "only-localhost"] }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
 teamy-cancellation = "=0.2.0"
