@@ -16,7 +16,10 @@ impl HomeShowArgs {
     /// # Errors
     ///
     /// This function does not return any errors.
-    #[expect(clippy::unused_async)]
+    #[expect(
+        clippy::unused_async,
+        reason = "command invoke methods share the async CLI dispatch shape"
+    )]
     pub async fn invoke(self) -> Result<CliOutput> {
         Ok(CliOutput::facet(HomeShowReport {
             path: crate::paths::APP_HOME.display().to_string(),
