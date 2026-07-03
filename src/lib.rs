@@ -1,7 +1,6 @@
 #![deny(clippy::disallowed_methods)]
 #![deny(clippy::disallowed_macros)]
 
-pub mod cancellation;
 pub mod cli;
 pub mod logging_init;
 pub mod paths;
@@ -12,6 +11,7 @@ use crate::cli::Cli;
 use chrono::DateTime;
 use chrono::Local;
 use chrono::Utc;
+use teamy_cancellation::CtrlCHandler;
 
 /// Version string combining package version, git repository metadata, and build time.
 fn version() -> String {
@@ -51,7 +51,7 @@ fn version() -> String {
 pub fn main() -> eyre::Result<()> {
     // Install color_eyre for better error reports
     color_eyre::install()?;
-    let cancellation_token = crate::cancellation::CtrlCHandler::default().install()?;
+    let cancellation_token = CtrlCHandler::default().install()?;
 
     #[cfg(windows)]
     {

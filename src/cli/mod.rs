@@ -5,7 +5,6 @@ pub mod home;
 pub mod init;
 pub mod output;
 
-use crate::cancellation::CancellationToken;
 use crate::cli::cache::CacheArgs;
 use crate::cli::global_args::GlobalArgs;
 use crate::cli::home::HomeArgs;
@@ -16,6 +15,7 @@ use eyre::Context;
 use facet::Facet;
 use figue::FigueBuiltins;
 use figue::{self as args};
+use teamy_cancellation::CancellationToken;
 
 /// A demonstration command line utility.
 ///
