@@ -687,6 +687,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
 
 [[package]]
+name = "humantime"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15cdd26707701c53297e2fa6afb323d55fbc1d0810c3aec078ae3ef0424c3c15"
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1370,12 +1376,15 @@ dependencies = [
 
 [[package]]
 name = "teamy-cancellation"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29647cb8c7d3429679a433a1caa3c799aed2a49bf6415d95fdc4d3404487dde9"
+version = "0.3.1"
+source = "git+https://github.com/TeamDman/teamy-cancellation.git?tag=v0.3.1#cc782906597b4294a63ab0f056c2928d48f724a4"
 dependencies = [
+ "arbitrary",
  "ctrlc",
  "eyre",
+ "facet",
+ "figue",
+ "humantime",
  "tracing",
  "tracing-subscriber",
 ]

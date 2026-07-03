@@ -4,6 +4,7 @@ use crate::cli::output::OutputFormat;
 use arbitrary::Arbitrary;
 use facet::Facet;
 use figue::{self as args};
+use teamy_cancellation::StopAfterArgs;
 
 /// Global arguments that apply to all commands.
 #[derive(Facet, Arbitrary, Debug, Default, PartialEq)]
@@ -28,10 +29,10 @@ pub struct GlobalArgs {
     #[arbitrary(default)]
     pub log_file: Option<String>,
 
-    /// Request graceful cancellation after the named tracing/Tracy span or log message is encountered.
-    #[facet(rename = "stop-after", default, args::named)]
+    /// Request graceful cancellation from tracing/Tracy spans, log messages, or elapsed time.
+    #[facet(flatten, default)]
     #[arbitrary(default)]
-    pub stop_after: Option<String>,
+    pub stop_after: StopAfterArgs,
 
     /// Render command output as `text`, `json`, or `csv`.
     ///

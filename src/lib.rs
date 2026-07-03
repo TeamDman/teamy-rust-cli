@@ -77,12 +77,20 @@ pub fn main() -> eyre::Result<()> {
                 // TODO(template): replace the implementation git URL with the generated repository path.
                 help.version(version)
                     .include_implementation_source_file(true)
-                    .include_implementation_github_url("TeamDman/teamy-rust-cli", env!("GIT_REVISION"))
+                    .include_implementation_github_url(
+                        "TeamDman/teamy-rust-cli",
+                        env!("GIT_REVISION"),
+                    )
             })
             .build(),
     )
     .run()
     .unwrap();
+
+    let _stop_after_duration_thread = cli
+        .global_args
+        .stop_after
+        .start_stop_after_duration_thread(cancellation_token.clone())?;
 
     // Initialize logging
     logging_init::init_logging(&cli.global_args, cancellation_token.clone())?;

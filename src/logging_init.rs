@@ -5,7 +5,6 @@ use std::fs::File;
 use std::sync::Arc;
 use std::sync::Mutex;
 use teamy_cancellation::CancellationToken;
-use teamy_cancellation::StopAfterLayer;
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Registry;
@@ -70,9 +69,11 @@ pub fn init_logging(
         .without_time()
         .with_filter(default_log_filter(global_args)?);
     let subscriber = subscriber.with(stderr_layer);
-    let subscriber = subscriber.with(global_args.stop_after.as_ref().map(|stop_after| {
-        StopAfterLayer::new(stop_after, cancellation_token)
-    }));
+    let subscriber = subscriber.with(
+        global_args
+            .stop_after
+            .stop_after_span_layer(cancellation_token),
+    );
 
     let json_log_path = match global_args.log_file.as_ref() {
         None => None,
