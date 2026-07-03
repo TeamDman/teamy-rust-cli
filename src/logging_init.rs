@@ -3,16 +3,47 @@ use crate::cli::global_args::GlobalArgs;
 use chrono::Local;
 use eyre::bail;
 use std::fs::File;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tracing::debug;
-use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Registry;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::util::SubscriberInitExt;
+
+fn default_log_filter(global_args: &GlobalArgs) -> eyre::Result<EnvFilter> {
+    if let Some(filter) = global_args.log_filter.as_ref() {
+        if global_args.debug {
+            bail!("cannot specify log filter with --debug");
+        }
+        return EnvFilter::builder().parse(filter).map_err(Into::into);
+    }
+
+    let own_level = if global_args.debug { "debug" } else { "info" };
+    EnvFilter::builder()
+        .parse(format!("warn,teamy_rust_cli={own_level}"))
+        .map_err(Into::into)
+}
+
+fn tracy_log_filter_directives() -> [&'static str; 7] {
+    [
+        "trace",
+        "cranelift_codegen=warn",
+        "cranelift_frontend=warn",
+        "cranelift_jit=warn",
+        "cranelift_native=warn",
+        "regalloc2=warn",
+        "wasmtime=warn",
+    ]
+}
+
+#[cfg(all(feature = "tracy", not(test)))]
+fn tracy_log_filter() -> eyre::Result<EnvFilter> {
+    EnvFilter::builder()
+        .parse(tracy_log_filter_directives().join(","))
+        .map_err(Into::into)
+}
 
 /// Initialize logging based on the provided configuration.
 ///
@@ -29,23 +60,14 @@ pub fn init_logging(
 ) -> eyre::Result<()> {
     let subscriber = Registry::default();
 
-    let env_filter_layer = EnvFilter::builder()
-        .with_default_directive(match (global_args.debug, global_args.log_filter.as_ref()) {
-            (true, None) => LevelFilter::DEBUG.into(),
-            (false, None) => LevelFilter::INFO.into(),
-            (true, Some(_)) => bail!("cannot specify log filter with --debug"),
-            (false, Some(x)) => LevelFilter::from_str(x)?.into(),
-        })
-        .from_env()?;
-    let subscriber = subscriber.with(env_filter_layer);
-
     let stderr_layer = tracing_subscriber::fmt::layer()
         .with_file(cfg!(debug_assertions))
         .with_line_number(cfg!(debug_assertions))
         .with_target(true)
         .with_writer(std::io::stderr)
         .pretty()
-        .without_time();
+        .without_time()
+        .with_filter(default_log_filter(global_args)?);
     let subscriber = subscriber.with(stderr_layer);
     let subscriber = subscriber.with(global_args.stop_after.as_ref().map(|stop_after| {
         crate::cancellation::StopAfterLayer::new(stop_after, cancellation_token)
@@ -78,7 +100,8 @@ pub fn init_logging(
             .with_file(true)
             .with_target(false)
             .with_line_number(true)
-            .with_writer(json_writer);
+            .with_writer(json_writer)
+            .with_filter(default_log_filter(global_args)?);
         Some(json_layer)
     } else {
         None
@@ -86,7 +109,8 @@ pub fn init_logging(
     let subscriber = subscriber.with(json_layer);
 
     #[cfg(all(feature = "tracy", not(test)))]
-    let subscriber = subscriber.with(tracing_tracy::TracyLayer::default());
+    let subscriber =
+        subscriber.with(tracing_tracy::TracyLayer::default().with_filter(tracy_log_filter()?));
 
     if let Err(error) = subscriber.try_init() {
         eprintln!(
@@ -106,4 +130,20 @@ pub fn init_logging(
         "Tracing initialized"
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_log_filter_does_not_change_tracy_trace_filter() {
+        let global_args = GlobalArgs {
+            log_filter: Some(String::from("error")),
+            ..GlobalArgs::default()
+        };
+
+        default_log_filter(&global_args).expect("human log filter should parse");
+        assert_eq!(tracy_log_filter_directives()[0], "trace");
+    }
 }
