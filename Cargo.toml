@@ -31,7 +31,10 @@ figue = { package = "teamy-figue", version = "=5.1.0", features = ["arbitrary"] 
 open = "5"
 
 [target.'cfg(windows)'.dependencies]
-teamy-windows = "0.9.0"
+windows = { version = "0.62.2", features = [
+    "Win32_Globalization",
+    "Win32_System_Console",
+] }
 
 [features]
 default = []
@@ -83,5 +86,3 @@ unnecessary_safety_comment = "warn"
 unnecessary_safety_doc = "warn"
 unneeded_field_pattern = "warn"
 unused_result_ok = "warn"
-
-

@@ -5,6 +5,8 @@ pub mod cancellation;
 pub mod cli;
 pub mod logging_init;
 pub mod paths;
+#[cfg(windows)]
+mod windows_startup;
 
 use crate::cli::Cli;
 use chrono::DateTime;
@@ -55,11 +57,11 @@ pub fn main() -> eyre::Result<()> {
     {
         // Enable ANSI support on Windows
         // This fails in a pipe scenario, so we ignore the error
-        let _ = teamy_windows::console::enable_ansi_support();
+        let _ = windows_startup::enable_ansi_support();
 
         // Warn if UTF-8 is not enabled on Windows
         #[cfg(windows)]
-        teamy_windows::string::warn_if_utf8_not_enabled();
+        windows_startup::warn_if_utf8_not_enabled();
     };
 
     // Parse command line arguments using figue
