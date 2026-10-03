@@ -9,16 +9,25 @@ fn main() {
     add_build_timestamp();
 }
 
+/// Cargo consumes these stdout instructions before the runtime logger exists.
+#[expect(
+    clippy::disallowed_macros,
+    reason = "Build-script stdout is Cargo's instruction protocol, not runtime logging"
+)]
+fn cargo_instruction(instruction: std::fmt::Arguments<'_>) {
+    println!("cargo:{instruction}");
+}
+
 /// Re-run the build script when normal binary inputs change so embedded build metadata stays fresh.
 fn add_build_script_inputs() {
-    println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=Cargo.toml");
-    println!("cargo:rerun-if-changed=src");
+    cargo_instruction(format_args!("rerun-if-changed=build.rs"));
+    cargo_instruction(format_args!("rerun-if-changed=Cargo.toml"));
+    cargo_instruction(format_args!("rerun-if-changed=src"));
 }
 
 /// Embeds Windows resources (like application icon) into the executable.
 fn add_exe_resources() {
-    println!("cargo:rerun-if-changed=resources");
+    cargo_instruction(format_args!("rerun-if-changed=resources"));
 
     embed_resource::compile("resources/app.rc", embed_resource::NONE)
         .manifest_required()
@@ -48,30 +57,30 @@ fn add_git_metadata() {
         None => "unknown",
     };
 
-    println!("cargo:rustc-env=GIT_REVISION={rev}");
-    println!("cargo:rustc-env=GIT_BRANCH={branch}");
-    println!("cargo:rustc-env=GIT_REPOSITORY_URL={repository}");
-    println!("cargo:rustc-env=GIT_WORKTREE_STATUS={dirty}");
+    cargo_instruction(format_args!("rustc-env=GIT_REVISION={rev}"));
+    cargo_instruction(format_args!("rustc-env=GIT_BRANCH={branch}"));
+    cargo_instruction(format_args!("rustc-env=GIT_REPOSITORY_URL={repository}"));
+    cargo_instruction(format_args!("rustc-env=GIT_WORKTREE_STATUS={dirty}"));
 }
 
 /// Re-run the build script when the current git metadata changes.
 fn add_git_metadata_inputs() {
     if let Some(git_config_path) = git_output(&["rev-parse", "--git-path", "config"]) {
-        println!("cargo:rerun-if-changed={git_config_path}");
+        cargo_instruction(format_args!("rerun-if-changed={git_config_path}"));
     }
 
     if let Some(head_path) = git_output(&["rev-parse", "--git-path", "HEAD"]) {
-        println!("cargo:rerun-if-changed={head_path}");
+        cargo_instruction(format_args!("rerun-if-changed={head_path}"));
     }
 
     if let Some(index_path) = git_output(&["rev-parse", "--git-path", "index"]) {
-        println!("cargo:rerun-if-changed={index_path}");
+        cargo_instruction(format_args!("rerun-if-changed={index_path}"));
     }
 
     if let Some(head_ref) = git_output(&["symbolic-ref", "--quiet", "HEAD"])
         && let Some(head_ref_path) = git_output(&["rev-parse", "--git-path", &head_ref])
     {
-        println!("cargo:rerun-if-changed={head_ref_path}");
+        cargo_instruction(format_args!("rerun-if-changed={head_ref_path}"));
     }
 }
 
@@ -96,5 +105,5 @@ fn add_build_timestamp() {
         .expect("system clock should be after Unix epoch")
         .as_secs();
 
-    println!("cargo:rustc-env=BUILD_TIMESTAMP_UNIX={timestamp}");
+    cargo_instruction(format_args!("rustc-env=BUILD_TIMESTAMP_UNIX={timestamp}"));
 }

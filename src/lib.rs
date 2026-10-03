@@ -1,6 +1,3 @@
-#![deny(clippy::disallowed_methods)]
-#![deny(clippy::disallowed_macros)]
-
 pub mod cli;
 pub mod logging_init;
 pub mod paths;
@@ -11,6 +8,8 @@ use crate::cli::Cli;
 use chrono::DateTime;
 use chrono::Local;
 use chrono::Utc;
+use std::io::IsTerminal;
+use std::io::{self};
 use teamy_cancellation::CtrlCHandler;
 
 /// Version string combining package version, git repository metadata, and build time.
@@ -99,7 +98,13 @@ pub fn main() -> eyre::Result<()> {
     let requested_output_format = cli.global_args.output_format;
     let output = cli.invoke(cancellation_token.clone())?;
     cancellation_token.bail_if_cancelled()?;
-    output.emit(requested_output_format)?;
+    let stdout = io::stdout();
+    let output_is_terminal = stdout.is_terminal();
+    output.emit_to(
+        &mut stdout.lock(),
+        requested_output_format,
+        output_is_terminal,
+    )?;
     cancellation_token.bail_if_cancelled()?;
     Ok(())
 }

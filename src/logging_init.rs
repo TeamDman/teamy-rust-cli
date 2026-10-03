@@ -38,6 +38,16 @@ fn tracy_log_filter_directives() -> [&'static str; 7] {
     ]
 }
 
+#[expect(
+    clippy::disallowed_macros,
+    reason = "Logging initialization failed, so this bootstrap diagnostic cannot rely on the requested subscriber"
+)]
+fn report_logging_init_failure(error: &dyn std::fmt::Display) {
+    eprintln!(
+        "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
+    );
+}
+
 #[cfg(all(feature = "tracy", not(test)))]
 fn tracy_log_filter() -> eyre::Result<EnvFilter> {
     EnvFilter::builder()
@@ -115,9 +125,7 @@ pub fn init_logging(
         subscriber.with(tracing_tracy::TracyLayer::default().with_filter(tracy_log_filter()?));
 
     if let Err(error) = subscriber.try_init() {
-        eprintln!(
-            "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
-        );
+        report_logging_init_failure(&error);
         return Ok(());
     }
 

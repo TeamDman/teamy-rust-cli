@@ -1,5 +1,5 @@
-# Disallow specific standard library methods across the crate.
-# See: https://doc.rust-lang.org/nightly/clippy/lint_configuration.html#disallowed_methods
+# Policy, checks and scoped exceptions:
+# https://teamdman.github.io/teamy-docs/code-standards.html
 
 disallowed-methods = [
   { path = "std::env::set_var", reason = "Avoid setting global environment variables; use helpers (tempfile/TempEnv) or design APIs that accept configuration explicitly" },
@@ -17,6 +17,10 @@ disallowed-types = [
 ]
 
 disallowed-macros = [
+    { path = "std::print", reason = "Send diagnostics through tracing; render command results into a caller-supplied std::io::Write sink." },
+    { path = "std::println", reason = "Send diagnostics through tracing; render command results into a caller-supplied std::io::Write sink." },
+    { path = "std::eprint", reason = "Send diagnostics through tracing so filters, log files and terminal ownership apply." },
+    { path = "std::eprintln", reason = "Send diagnostics through tracing so filters, log files and terminal ownership apply." },
     { path = "std::ptr::addr_of_mut", reason = "Use `&raw mut` or `&const` instead." },
     { path = "serde_json::json", reason = "Use facet_json value construction or typed Facet models instead." },
 ]
