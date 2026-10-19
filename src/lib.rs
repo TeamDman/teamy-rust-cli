@@ -97,9 +97,11 @@ pub fn main() -> eyre::Result<()> {
 
     // Invoke whatever command was requested and render its output once at the top level
     let requested_output_format = cli.global_args.output_format;
-    let output = cli.invoke(cancellation_token.clone())?;
-    cancellation_token.bail_if_cancelled()?;
-    output.emit(requested_output_format)?;
-    cancellation_token.bail_if_cancelled()?;
-    Ok(())
+    cancellation_token.with_scope(|cancellation| {
+        let output = cli.invoke(&cancellation)?;
+        cancellation.bail_if_cancelled()?;
+        output.emit(requested_output_format, &cancellation)?;
+        cancellation.bail_if_cancelled()?;
+        Ok(())
+    })
 }

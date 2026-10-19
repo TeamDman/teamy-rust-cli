@@ -1,11 +1,17 @@
 use arbitrary::Arbitrary;
 use eyre::Context;
+use eyre::Report;
 use facet::Facet;
+use facet_json::SerializeOptions;
 use facet_pretty::ColorMode;
 use facet_pretty::PrettyPrinter;
+use std::io;
 use std::io::IsTerminal;
 use std::io::Write;
-use std::io::{self};
+use std::sync::Mutex;
+use teamy_cancellation::CancellableWriter;
+use teamy_cancellation::CancellationError;
+use teamy_cancellation::CancellationScope;
 
 #[derive(Arbitrary, Facet, Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[facet(rename_all = "kebab-case")]
@@ -28,11 +34,13 @@ impl core::fmt::Debug for CliOutput {
 }
 
 trait CliOutputValue {
-    fn render(
+    fn write_to(
         &self,
         format: OutputFormat,
         stdout_is_terminal: bool,
-    ) -> eyre::Result<Option<String>>;
+        writer: &mut dyn Write,
+        cancellation: &CancellationScope,
+    ) -> eyre::Result<()>;
 }
 
 struct FacetCliOutput<T> {
@@ -55,34 +63,40 @@ impl CliOutput {
 
     /// # Errors
     ///
-    /// This function will return an error if the selected output format cannot be rendered
-    /// or if the rendered output cannot be written to stdout.
-    pub fn emit(self, requested_format: Option<OutputFormat>) -> eyre::Result<()> {
-        let Some(output) = self.0 else {
-            return Ok(());
-        };
-
+    /// This function will return an error if serialization, writing, or flushing
+    /// fails, or the supplied execution scope accepts cancellation.
+    /// Already-written output is retained when cancellation or an error occurs.
+    pub fn emit(
+        self,
+        requested_format: Option<OutputFormat>,
+        cancellation: &CancellationScope,
+    ) -> eyre::Result<()> {
         let stdout_is_terminal = io::stdout().is_terminal();
         let format = requested_format.unwrap_or(if stdout_is_terminal {
             OutputFormat::Text
         } else {
             OutputFormat::Json
         });
-        let Some(rendered) = output.render(format, stdout_is_terminal)? else {
+        let mut stdout = io::stdout().lock();
+        self.write_to(format, stdout_is_terminal, &mut stdout, cancellation)
+    }
+
+    fn write_to(
+        self,
+        format: OutputFormat,
+        stdout_is_terminal: bool,
+        writer: &mut dyn Write,
+        cancellation: &CancellationScope,
+    ) -> eyre::Result<()> {
+        let Some(output) = self.0 else {
             return Ok(());
         };
-
-        let mut stdout = io::stdout().lock();
-        stdout
-            .write_all(rendered.as_bytes())
-            .wrap_err("failed to write command output")?;
-        if !rendered.ends_with('\n') {
-            stdout
-                .write_all(b"\n")
-                .wrap_err("failed to terminate command output")?;
-        }
-        stdout.flush().wrap_err("failed to flush command output")?;
-        Ok(())
+        let mut writer = CancellableWriter::new(writer, cancellation);
+        output.write_to(format, stdout_is_terminal, &mut writer, cancellation)?;
+        writer
+            .flush()
+            .map_err(output_io_error)
+            .wrap_err("failed to flush command output")
     }
 }
 
@@ -96,24 +110,86 @@ impl<T> CliOutputValue for FacetCliOutput<T>
 where
     T: Facet<'static> + 'static,
 {
-    fn render(
+    fn write_to(
         &self,
         format: OutputFormat,
         stdout_is_terminal: bool,
-    ) -> eyre::Result<Option<String>> {
-        let rendered = match format {
-            OutputFormat::Text => PrettyPrinter::new()
-                .with_colors(if stdout_is_terminal {
-                    ColorMode::Always
-                } else {
-                    ColorMode::Never
-                })
-                .format(&self.value),
-            OutputFormat::Json => facet_json::to_string_pretty(&self.value)
-                .wrap_err("failed to serialize command output as JSON")?,
-            OutputFormat::Csv => facet_csv::to_string(&self.value)
-                .wrap_err("failed to serialize command output as CSV")?,
-        };
-        Ok(Some(rendered))
+        writer: &mut dyn Write,
+        cancellation: &CancellationScope,
+    ) -> eyre::Result<()> {
+        match format {
+            OutputFormat::Text => {
+                let rendered = std::fmt::from_fn(|formatter| {
+                    PrettyPrinter::new()
+                        .with_colors(if stdout_is_terminal {
+                            ColorMode::Always
+                        } else {
+                            ColorMode::Never
+                        })
+                        .format_to(&self.value, formatter)
+                });
+                writeln!(writer, "{rendered}")
+                    .map_err(output_io_error)
+                    .wrap_err("failed to write command output")
+            }
+            OutputFormat::Json => {
+                let observed = Mutex::<Option<CancellationError>>::new(None);
+                let should_cancel = || {
+                    if let Err(error) = cancellation.bail_if_cancelled() {
+                        *observed.lock().unwrap() = Some(error);
+                        true
+                    } else {
+                        false
+                    }
+                };
+                let options = SerializeOptions::new()
+                    .pretty()
+                    .cancellation(&should_cancel);
+                facet_json::to_writer_std_with_options(&mut *writer, &self.value, &options)
+                    .map_err(|error| {
+                        if let Some(cancellation) = observed.lock().unwrap().take() {
+                            Report::new(cancellation).wrap_err(error)
+                        } else {
+                            output_io_error(error)
+                        }
+                    })
+                    .wrap_err("failed to serialize command output as JSON")?;
+                writer
+                    .write_all(b"\n")
+                    .map_err(output_io_error)
+                    .wrap_err("failed to terminate command output")
+            }
+            OutputFormat::Csv => {
+                let rendered = facet_csv::to_string(&self.value)
+                    .wrap_err("failed to serialize command output as CSV")?;
+                writer
+                    .write_all(rendered.as_bytes())
+                    .map_err(output_io_error)
+                    .wrap_err("failed to write command output")?;
+                if !rendered.ends_with('\n') {
+                    writer
+                        .write_all(b"\n")
+                        .map_err(output_io_error)
+                        .wrap_err("failed to terminate command output")?;
+                }
+                Ok(())
+            }
+        }
     }
 }
+
+fn output_io_error(error: io::Error) -> Report {
+    if let Some(cancellation) = error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<CancellationError>())
+        .cloned()
+    {
+        Report::new(cancellation).wrap_err(error)
+    } else {
+        Report::new(error)
+    }
+}
+
+#[cfg(test)]
+#[path = "output_tests.rs"]
+mod tests;
