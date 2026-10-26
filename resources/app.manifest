@@ -7,7 +7,7 @@
     type="win32"
 />
 <!-- when using task dialog stuff from use windows::Win32::UI::Controls -->
-<!-- <dependency>
+<dependency>
     <dependentAssembly>
         <assemblyIdentity
             type="win32"
@@ -19,5 +19,11 @@
         />
     </dependentAssembly>
 </dependency>
--->
-</assembly> 
+<application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+        <!-- Windows 10 1703+: native per-monitor dialog scaling; older Windows use the first supported fallback. -->
+        <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
+        <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+</application>
+</assembly>
