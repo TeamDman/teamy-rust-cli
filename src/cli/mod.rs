@@ -15,7 +15,7 @@ use eyre::Context;
 use facet::Facet;
 use figue::FigueBuiltins;
 use figue::{self as args};
-use teamy_cancellation::CancellationToken;
+use teamy_cancellation::CancellationScope;
 
 /// A demonstration command line utility.
 ///
@@ -42,23 +42,18 @@ pub struct Cli {
     pub command: Command,
 }
 
-impl PartialEq for Cli {
-    fn eq(&self, other: &Self) -> bool {
-        // Ignore builtins in comparison since FigueBuiltins doesn't implement PartialEq
-        self.global_args == other.global_args && self.command == other.command
-    }
-}
-
 impl Cli {
     /// # Errors
     ///
     /// This function will return an error if the tokio runtime cannot be built or if the command fails.
-    pub fn invoke(self, cancellation_token: CancellationToken) -> eyre::Result<CliOutput> {
+    pub fn invoke(self, cancellation: &CancellationScope) -> eyre::Result<CliOutput> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .wrap_err("Failed to build tokio runtime")?;
-        runtime.block_on(async move { self.command.invoke(cancellation_token).await })
+        runtime.block_on(cancellation.cancellable_scope(|cancellation| async move {
+            self.command.invoke(&cancellation).await
+        }))
     }
 }
 
@@ -80,8 +75,7 @@ impl Command {
     /// # Errors
     ///
     /// This function will return an error if the subcommand fails.
-    pub async fn invoke(self, cancellation_token: CancellationToken) -> eyre::Result<CliOutput> {
-        cancellation_token.bail_if_cancelled()?;
+    pub async fn invoke(self, _cancellation: &CancellationScope) -> eyre::Result<CliOutput> {
         match self {
             Command::Cache(args) => args.invoke().await,
             Command::Home(args) => args.invoke().await,

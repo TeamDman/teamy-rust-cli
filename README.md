@@ -15,7 +15,7 @@ Opinionated starting point for building small and medium Rust command line appli
 
 This template exists to remove the repeated setup work for a new CLI project. It ships with:
 
-- `figue` + `facet` based argument parsing
+- `figue` + `facet` based argument parsing using Teamy's published forks
 - top-level output rendering with `text`, `json`, and `csv` formats
 - `--help` and `--version` support, including git repository URL, branch, revision, worktree status, and local-time build timestamp in version output
 - structured logging to stderr with optional NDJSON log files
@@ -23,7 +23,7 @@ This template exists to remove the repeated setup work for a new CLI project. It
 - CLI roundtrip fuzz tests
 - `init` scaffolding command for creating new Teamy Rust CLI repositories
 - PowerShell helpers for running the full quality gate and temporarily supporting the legacy initializer
-- cooperative cancellation helpers from `teamy-cancellation`
+- cancellation signals and linked execution scopes from `teamy-cancellation`
 
 ## Quick Start
 
@@ -93,6 +93,14 @@ Commands that return structured data render through a shared top-level output la
 - If `--output-format` is omitted, the CLI defaults to `text` in an interactive terminal and `json` when stdout is redirected.
 - Commands that only perform side effects, such as `open` and `clean`, return no structured stdout payload.
 
+JSON and text output stream to the writer under the invocation's cancellation
+scope. JSON also checks cancellation during traversal and scalar encoding.
+CSV currently buffers its rendered document, then uses bounded cancellation-aware
+writes. All formats check cancellation while writing and before flushing, keeping
+the original cancellation reason and respecting protected scopes. Cancellation
+or an output failure can leave a partial document; synchronous checks cannot
+interrupt a blocked underlying write or flush.
+
 ## Environment Variables
 
 <!-- TODO(template): replace the environment variable names below with project-specific names. -->
@@ -104,6 +112,30 @@ The template currently recognizes these environment variables:
 - `RUST_LOG`: provides a tracing filter when `--log-filter` is not supplied
 
 These names are placeholders and should be renamed in the generated project.
+
+## Dependencies and Cancellation
+
+The canonical Rust names alias TeamDman's independent published forks:
+
+- `facet` and `facet-pretty` use their `teamy-facet-* =0.50.0-rc.7` packages.
+- `facet-csv` uses `teamy-facet-csv =0.50.0-rc.8`.
+- `facet-json` uses `teamy-facet-json =0.50.0-rc.8`; the shared `teamy-facet-format` dependency also uses `=0.50.0-rc.8`.
+- `figue` uses `teamy-figue =6.0.0-rc.4`, with `teamy-figue-attrs =6.0.0-rc.3`.
+- `teamy-cancellation =0.6.0` supplies matching Figue arguments, cancellation execution scopes, and synchronous I/O checkpoints.
+
+These are forks, not the upstream Facet or Figue releases. The mixed Facet
+versions are deliberate: the JSON/format release adds cooperative cancellation
+and direct writer output while retaining the matching Facet rc.7 core types.
+
+The process owns a shared `CancellationToken` for Ctrl-C and stop-after requests.
+Invocation receives a bounded `CancellationScope`; its linked cancellable future
+checks cancellation at poll boundaries. Pass that supplied scope into new async
+operations, and use its nested scope helpers rather than starting an independent
+root. Synchronous work still needs explicit checkpoints or yields. Enable
+`teamy-cancellation`'s `deferral` feature for operations that must finish a
+submitted mutation and related cleanup in a bounded protected scope. Asynchronous
+shutdown owners should use a cooperative scope and retain their required child
+work.
 
 ## Quality Gate
 
