@@ -109,7 +109,7 @@ pub fn init_logging(
         });
 
         let diagnostics = teamy_tracing::Diagnostics::default();
-        let json_layer = teamy_tracing::layer(json_writer, diagnostics.clone())
+        let json_layer = teamy_tracing::json_layer(json_writer, diagnostics.clone())
             .event_format(
                 teamy_tracing::FacetJson::default()
                     .with_diagnostics(diagnostics)

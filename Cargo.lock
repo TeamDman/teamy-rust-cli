@@ -1405,9 +1405,9 @@ dependencies = [
 
 [[package]]
 name = "teamy-tracing"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a890154a5ed4cda58ca6c209c8a9e6a0fbf50efa1edfd8b4a52ad48c00e60d9"
+checksum = "16a4b6270a908b862cd4fe93de4ca452a69f9ac0151b01c03de8901bb5f0e334"
 dependencies = [
  "teamy-facet",
  "teamy-facet-format",
