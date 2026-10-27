@@ -1,14 +1,11 @@
 use arbitrary::Arbitrary;
 use eyre::Context;
-use eyre::Report;
 use facet::Facet;
 use facet_json::SerializeOptions;
 use facet_pretty::ColorMode;
 use facet_pretty::PrettyPrinter;
-use std::io;
 use std::io::Write;
 use teamy_cancellation::CancellableWriter;
-use teamy_cancellation::CancellationError;
 use teamy_cancellation::CancellationScope;
 
 #[derive(Arbitrary, Facet, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -84,10 +81,7 @@ impl CliOutput {
         });
         let mut writer = CancellableWriter::new(writer, cancellation);
         output.write_to(format, output_is_terminal, &mut writer, cancellation)?;
-        writer
-            .flush()
-            .map_err(output_io_error)
-            .wrap_err("failed to flush command output")
+        writer.flush().wrap_err("failed to flush command output")
     }
 }
 
@@ -119,18 +113,14 @@ where
                         })
                         .format_to(&self.value, formatter)
                 });
-                writeln!(writer, "{rendered}")
-                    .map_err(output_io_error)
-                    .wrap_err("failed to write command output")
+                writeln!(writer, "{rendered}").wrap_err("failed to write command output")
             }
             OutputFormat::Json => {
                 let options = SerializeOptions::new().pretty();
                 facet_json::to_writer_std_with_options(&mut *writer, &self.value, &options)
-                    .map_err(output_io_error)
                     .wrap_err("failed to serialize command output as JSON")?;
                 writer
                     .write_all(b"\n")
-                    .map_err(output_io_error)
                     .wrap_err("failed to terminate command output")
             }
             OutputFormat::Csv => {
@@ -138,29 +128,15 @@ where
                     .wrap_err("failed to serialize command output as CSV")?;
                 writer
                     .write_all(rendered.as_bytes())
-                    .map_err(output_io_error)
                     .wrap_err("failed to write command output")?;
                 if !rendered.ends_with('\n') {
                     writer
                         .write_all(b"\n")
-                        .map_err(output_io_error)
                         .wrap_err("failed to terminate command output")?;
                 }
                 Ok(())
             }
         }
-    }
-}
-
-fn output_io_error(error: io::Error) -> Report {
-    if let Some(cancellation) = error
-        .get_ref()
-        .and_then(|source| source.downcast_ref::<CancellationError>())
-        .cloned()
-    {
-        Report::new(cancellation).wrap_err(error)
-    } else {
-        Report::new(error)
     }
 }
 
