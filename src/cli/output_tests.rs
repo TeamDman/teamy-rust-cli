@@ -6,7 +6,7 @@ use std::fmt;
 use std::io;
 use std::io::Write;
 use std::rc::Rc;
-use teamy_cancellation::CancellationError;
+use teamy_cancellation::CancellationErrorExt;
 use teamy_cancellation::CancellationToken;
 
 #[derive(Default)]
@@ -90,7 +90,7 @@ fn json_observes_proxy_requested_cancellation_at_the_next_write() -> eyre::Resul
             .emit_to(&mut writer, Some(OutputFormat::Json), false, &scope)
             .unwrap_err();
 
-        let cancellation = error.downcast_ref::<CancellationError>().unwrap();
+        let cancellation = error.as_cancellation().unwrap();
         assert_eq!(cancellation.reason, "cancelled while preparing JSON");
         assert_eq!(conversions.get(), 3);
         assert!(
@@ -124,7 +124,7 @@ fn each_output_format_stops_writing_and_keeps_typed_cancellation() -> eyre::Resu
             .emit_to(&mut writer, Some(format), false, &scope)
             .unwrap_err();
 
-            let cancellation = error.downcast_ref::<CancellationError>().unwrap();
+            let cancellation = error.as_cancellation().unwrap();
             assert_eq!(cancellation.reason, "cancelled during output");
             assert_eq!(writer.write_calls, 1);
             assert!(!writer.bytes.is_empty());
