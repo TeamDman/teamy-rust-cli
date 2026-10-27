@@ -18,16 +18,17 @@ chrono = "0.4"
 color-eyre = "0.6.5"
 eyre = "0.6.12"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+teamy-tracing = "=0.1.0"
 tracing-tracy = { version = "0.11", optional = true, default-features = false, features = ["enable", "system-tracing", "context-switch-tracing", "sampling", "code-transfer", "callstack-inlines", "only-localhost"] }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
-teamy-cancellation = { version = "=0.6.0", features = ["async", "figue", "arbitrary", "io"] }
+teamy-cancellation = { version = "=0.7.1", features = ["async", "figue", "arbitrary", "io"] }
 facet = { package = "teamy-facet", version = "=0.50.0-rc.7", features = ["uuid", "compact_str", "chrono", "net"] }
-facet-csv = { package = "teamy-facet-csv", version = "=0.50.0-rc.8" }
-facet-json = { package = "teamy-facet-json", version = "=0.50.0-rc.8" }
+facet-csv = { package = "teamy-facet-csv", version = "=0.50.0-rc.9" }
+facet-json = { package = "teamy-facet-json", version = "=0.50.0-rc.9" }
 facet-pretty = { package = "teamy-facet-pretty", version = "=0.50.0-rc.7" }
-figue = { package = "teamy-figue", version = "=6.0.0-rc.4", features = ["arbitrary"] }
+figue = { package = "teamy-figue", version = "=6.0.0-rc.5", features = ["arbitrary"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]
@@ -41,7 +42,7 @@ default = []
 tracy = ["dep:tracing-tracy"]
 
 [build-dependencies]
-embed-resource = "3.0.6"
+embed-resource = { package = "teamy-embed-resource", version = "=0.1.0", default-features = false }
 
 [lints.rust]
 ambiguous_negative_literals = "warn"

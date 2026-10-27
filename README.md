@@ -94,12 +94,12 @@ Commands that return structured data render through a shared top-level output la
 - Commands that only perform side effects, such as `open` and `clean`, return no structured stdout payload.
 
 JSON and text output stream to the writer under the invocation's cancellation
-scope. JSON also checks cancellation during traversal and scalar encoding.
-CSV currently buffers its rendered document, then uses bounded cancellation-aware
+scope. CSV currently buffers its rendered document, then uses bounded cancellation-aware
 writes. All formats check cancellation while writing and before flushing, keeping
 the original cancellation reason and respecting protected scopes. Cancellation
-or an output failure can leave a partial document; synchronous checks cannot
-interrupt a blocked underlying write or flush.
+or an output failure can leave a partial document. The published JSON serializer
+uses writer checkpoints; it cannot interrupt work between writes. Synchronous
+checks cannot interrupt a blocked underlying write or flush.
 
 ## Environment Variables
 
@@ -118,14 +118,19 @@ These names are placeholders and should be renamed in the generated project.
 The canonical Rust names alias TeamDman's independent published forks:
 
 - `facet` and `facet-pretty` use their `teamy-facet-* =0.50.0-rc.7` packages.
-- `facet-csv` uses `teamy-facet-csv =0.50.0-rc.8`.
-- `facet-json` uses `teamy-facet-json =0.50.0-rc.8`; the shared `teamy-facet-format` dependency also uses `=0.50.0-rc.8`.
-- `figue` uses `teamy-figue =6.0.0-rc.4`, with `teamy-figue-attrs =6.0.0-rc.3`.
-- `teamy-cancellation =0.6.0` supplies matching Figue arguments, cancellation execution scopes, and synchronous I/O checkpoints.
+- `facet-csv` and `facet-json` use their `teamy-facet-* =0.50.0-rc.9` packages; the shared `teamy-facet-format` dependency also uses `=0.50.0-rc.9`.
+- `figue` uses `teamy-figue =6.0.0-rc.5`, with `teamy-figue-attrs =6.0.0-rc.3`.
+- `teamy-cancellation =0.7.1` supplies matching Figue arguments, cancellation execution scopes, and synchronous I/O checkpoints.
 
 These are forks, not the upstream Facet or Figue releases. The mixed Facet
-versions are deliberate: the JSON/format release adds cooperative cancellation
-and direct writer output while retaining the matching Facet rc.7 core types.
+versions are deliberate: JSON/CSV/format rc.9 share the Facet rc.7 core types.
+
+NDJSON log files use `teamy-tracing =0.1.0` with Facet JSON. Windows resources use
+`teamy-embed-resource =0.1.0` with manifest discovery disabled;
+`compile_for_everything()` embeds the manifest and icon in binaries, examples,
+and tests. These dependencies replace the Serde-backed JSON logger and TOML
+manifest discovery. The resolved dependency tree, including all features and
+targets, contains no Serde crates. `teamy-tracing` requires Rust 1.96 or newer.
 
 The process owns a shared `CancellationToken` for Ctrl-C and stop-after requests.
 Invocation receives a bounded `CancellationScope`; its linked cancellable future

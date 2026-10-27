@@ -76,7 +76,7 @@ impl TryFrom<SerializationProbeProxy> for SerializationProbe {
 }
 
 #[test]
-fn json_stops_during_traversal_and_preserves_the_cancellation_reason() -> eyre::Result<()> {
+fn json_observes_proxy_requested_cancellation_at_the_next_write() -> eyre::Result<()> {
     let token = CancellationToken::new();
     let conversions = Rc::new(Cell::new(0));
     let probe = SerializationProbe {

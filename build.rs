@@ -25,11 +25,11 @@ fn add_build_script_inputs() {
     cargo_instruction(format_args!("rerun-if-changed=src"));
 }
 
-/// Embeds Windows resources (like application icon) into the executable.
+/// Embeds the Windows manifest and icon into binaries, examples, and tests.
 fn add_exe_resources() {
     cargo_instruction(format_args!("rerun-if-changed=resources"));
 
-    embed_resource::compile("resources/app.rc", embed_resource::NONE)
+    embed_resource::compile_for_everything("resources/app.rc", embed_resource::NONE)
         .manifest_required()
         .expect("failed to embed resources");
 }

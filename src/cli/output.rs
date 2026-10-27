@@ -7,7 +7,6 @@ use facet_pretty::ColorMode;
 use facet_pretty::PrettyPrinter;
 use std::io;
 use std::io::Write;
-use std::sync::Mutex;
 use teamy_cancellation::CancellableWriter;
 use teamy_cancellation::CancellationError;
 use teamy_cancellation::CancellationScope;
@@ -107,7 +106,7 @@ where
         format: OutputFormat,
         output_is_terminal: bool,
         writer: &mut dyn Write,
-        cancellation: &CancellationScope,
+        _cancellation: &CancellationScope,
     ) -> eyre::Result<()> {
         match format {
             OutputFormat::Text => {
@@ -125,26 +124,9 @@ where
                     .wrap_err("failed to write command output")
             }
             OutputFormat::Json => {
-                let observed = Mutex::<Option<CancellationError>>::new(None);
-                let should_cancel = || {
-                    if let Err(error) = cancellation.bail_if_cancelled() {
-                        *observed.lock().unwrap() = Some(error);
-                        true
-                    } else {
-                        false
-                    }
-                };
-                let options = SerializeOptions::new()
-                    .pretty()
-                    .cancellation(&should_cancel);
+                let options = SerializeOptions::new().pretty();
                 facet_json::to_writer_std_with_options(&mut *writer, &self.value, &options)
-                    .map_err(|error| {
-                        if let Some(cancellation) = observed.lock().unwrap().take() {
-                            Report::new(cancellation).wrap_err(error)
-                        } else {
-                            output_io_error(error)
-                        }
-                    })
+                    .map_err(output_io_error)
                     .wrap_err("failed to serialize command output as JSON")?;
                 writer
                     .write_all(b"\n")

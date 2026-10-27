@@ -95,12 +95,15 @@ pub fn init_logging(
                 .expect("failed to clone json log file handle")
         });
 
-        let json_layer = tracing_subscriber::fmt::layer()
-            .json()
-            .with_file(true)
-            .with_target(false)
-            .with_line_number(true)
-            .with_writer(json_writer)
+        let diagnostics = teamy_tracing::Diagnostics::default();
+        let json_layer = teamy_tracing::layer(json_writer, diagnostics.clone())
+            .event_format(
+                teamy_tracing::FacetJson::default()
+                    .with_diagnostics(diagnostics)
+                    .with_file(true)
+                    .with_target(false)
+                    .with_line_number(true),
+            )
             .with_filter(default_log_filter(global_args)?);
         Some(json_layer)
     } else {
