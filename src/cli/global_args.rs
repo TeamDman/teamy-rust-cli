@@ -1,5 +1,6 @@
 //! Global arguments that apply to all commands.
 
+use crate::cli::log_format::LogFormat;
 use crate::cli::output::OutputFormat;
 use arbitrary::Arbitrary;
 use facet::Facet;
@@ -10,25 +11,34 @@ use teamy_cancellation::StopAfterArgs;
 #[derive(Facet, Arbitrary, Debug, Default, PartialEq)]
 #[facet(rename_all = "kebab-case")]
 pub struct GlobalArgs {
-    /// Enable debug logging, including backtraces on panics.
+    /// Select stderr DEBUG unless an explicit filter is provided; overrides `RUST_LOG`.
     #[facet(args::named, default)]
     pub debug: bool,
 
-    /// Log level filter directive.
-    #[facet(args::named)]
+    /// Tracing filter directive, also accepted as `--log-level`.
+    #[facet(args::named, args::alias = "log-level")]
     #[arbitrary(default)]
     pub log_filter: Option<String>,
 
-    /// Write structured ndjson logs.
-    ///
-    /// If a file path is provided, logs are written to that file.
-    /// If a directory path is provided, a filename like `log_<timestamp>.ndjson`
-    /// is generated in that directory.
-    /// If omitted, no JSON log file is written.
+    /// Stderr encoding: text (default) or ndjson.
+    #[facet(args::named)]
+    #[arbitrary(default)]
+    pub log_format: Option<LogFormat>,
+
+    /// File filter directives, independent of stderr and `RUST_LOG`; default debug.
+    #[facet(args::named)]
+    #[arbitrary(default)]
+    pub log_file_filter: Option<String>,
+
+    /// File encoding: ndjson (default) or text.
+    #[facet(args::named)]
+    #[arbitrary(default)]
+    pub log_file_format: Option<LogFormat>,
+
+    /// Append diagnostics to this explicit file path. Omitted means no file sink.
     #[facet(args::named)]
     #[arbitrary(default)]
     pub log_file: Option<String>,
-
     /// Request graceful cancellation from tracing/Tracy spans, log messages, or elapsed time.
     #[facet(flatten, default)]
     #[arbitrary(default)]

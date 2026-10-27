@@ -1,3 +1,5 @@
+use std::fmt::Write;
+mod template_inventory;
 use std::process::Command;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -7,6 +9,7 @@ fn main() {
     add_exe_resources();
     add_git_metadata();
     add_build_timestamp();
+    embed_template();
 }
 
 /// Cargo consumes these stdout instructions before the runtime logger exists.
@@ -25,11 +28,11 @@ fn add_build_script_inputs() {
     cargo_instruction(format_args!("rerun-if-changed=src"));
 }
 
-/// Embeds Windows resources (like application icon) into the executable.
+/// Embeds the same Windows manifest and icon into binaries, examples, and tests.
 fn add_exe_resources() {
     cargo_instruction(format_args!("rerun-if-changed=resources"));
 
-    embed_resource::compile("resources/app.rc", embed_resource::NONE)
+    embed_resource::compile_for_everything("resources/app.rc", embed_resource::NONE)
         .manifest_required()
         .expect("failed to embed resources");
 }
@@ -106,4 +109,28 @@ fn add_build_timestamp() {
         .as_secs();
 
     cargo_instruction(format_args!("rustc-env=BUILD_TIMESTAMP_UNIX={timestamp}"));
+}
+
+fn embed_template() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for directory in template_inventory::TEMPLATE_DIRECTORIES {
+        cargo_instruction(format_args!("rerun-if-changed={directory}"));
+    }
+    let files = template_inventory::template_files(root).expect("curated template inventory");
+    let mut source = String::from("&[\n");
+    for file in files {
+        let relative = file.strip_prefix(root).expect("template input inside root");
+        let relative = relative
+            .to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "/");
+        cargo_instruction(format_args!("rerun-if-changed={}", file.display()));
+        let absolute = file.to_string_lossy();
+        writeln!(source, "({relative:?}, include_bytes!({absolute:?})),")
+            .expect("write source literal");
+    }
+    source.push_str("]\n");
+    let output =
+        std::path::PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo output directory"));
+    std::fs::write(output.join("template_files.rs"), source)
+        .expect("write embedded template index");
 }

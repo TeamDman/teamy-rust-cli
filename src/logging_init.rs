@@ -1,31 +1,47 @@
 use crate::cli::global_args::GlobalArgs;
-use chrono::Local;
-use eyre::bail;
-use std::fs::File;
-use std::sync::Arc;
+use crate::cli::log_format::LogFormat;
+use eyre::Context;
+use std::fs::OpenOptions;
+use std::io::IsTerminal;
 use std::sync::Mutex;
 use teamy_cancellation::CancellationToken;
-use tracing::debug;
+use tracing::Metadata;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Registry;
+use tracing_subscriber::filter::FilterExt;
+use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::util::SubscriberInitExt;
 
-fn default_log_filter(global_args: &GlobalArgs) -> eyre::Result<EnvFilter> {
-    if let Some(filter) = global_args.log_filter.as_ref() {
-        if global_args.debug {
-            bail!("cannot specify log filter with --debug");
+fn exclude_tracy_frame_mark(meta: &Metadata<'_>) -> bool {
+    meta.fields().field("tracy.frame_mark").is_none()
+}
+
+/// Resolve stderr independently of the optional file sink.
+#[must_use]
+fn stderr_filter_directive<'a>(args: &'a GlobalArgs, inherited: Option<&'a str>) -> &'a str {
+    args.log_filter.as_deref().unwrap_or_else(|| {
+        if args.debug {
+            "debug"
+        } else {
+            inherited.unwrap_or("info")
         }
-        return EnvFilter::builder().parse(filter).map_err(Into::into);
-    }
+    })
+}
 
-    let own_level = if global_args.debug { "debug" } else { "info" };
+fn stderr_event(meta: &Metadata<'_>) -> bool {
+    exclude_tracy_frame_mark(meta) && meta.target() != "teamy::failure_file"
+}
+
+fn parse_filter(value: &str) -> eyre::Result<EnvFilter> {
     EnvFilter::builder()
-        .parse(format!("warn,teamy_rust_cli={own_level}"))
+        .with_regex(false)
+        .parse(value)
         .map_err(Into::into)
 }
 
+#[cfg(all(feature = "tracy", not(test)))]
 fn tracy_log_filter_directives() -> [&'static str; 7] {
     [
         "trace",
@@ -38,122 +54,189 @@ fn tracy_log_filter_directives() -> [&'static str; 7] {
     ]
 }
 
-#[expect(
-    clippy::disallowed_macros,
-    reason = "Logging initialization failed, so this bootstrap diagnostic cannot rely on the requested subscriber"
-)]
-fn report_logging_init_failure(error: &dyn std::fmt::Display) {
-    eprintln!(
-        "Failed to initialize tracing subscriber - are you running `cargo test`? If so, multiple test entrypoints may be running from the same process. https://github.com/tokio-rs/console/issues/505 : {error}"
-    );
-}
-
-#[cfg(all(feature = "tracy", not(test)))]
-fn tracy_log_filter() -> eyre::Result<EnvFilter> {
-    EnvFilter::builder()
-        .parse(tracy_log_filter_directives().join(","))
-        .map_err(Into::into)
-}
-
-/// Initialize logging based on the provided configuration.
+/// Initialize independently filtered and formatted diagnostic sinks.
 ///
 /// # Errors
-///
-/// This function will return an error if creating the log file or directories fails.
-///
-/// # Panics
-///
-/// This function may panic if locking or cloning the log file handle fails.
-pub fn init_logging(
-    global_args: &GlobalArgs,
-    cancellation_token: CancellationToken,
-) -> eyre::Result<()> {
-    let subscriber = Registry::default();
+/// Returns invalid filters, file-open failures, or subscriber installation failures.
+/// All filters are validated before file effects. Existing files are appended.
+pub fn init_logging(args: &GlobalArgs, cancellation: CancellationToken) -> eyre::Result<()> {
+    build_subscriber(args, cancellation, BoxMakeWriter::new(std::io::stderr))?
+        .try_init()
+        .wrap_err("cannot install tracing subscriber")?;
+    tracing::debug!("Tracing initialized");
+    Ok(())
+}
 
-    let stderr_layer = tracing_subscriber::fmt::layer()
-        .with_file(cfg!(debug_assertions))
-        .with_line_number(cfg!(debug_assertions))
-        .with_target(true)
-        .with_writer(std::io::stderr)
-        .pretty()
-        .without_time()
-        .with_filter(default_log_filter(global_args)?);
-    let subscriber = subscriber.with(stderr_layer);
-    let subscriber = subscriber.with(
-        global_args
-            .stop_after
-            .stop_after_span_layer(cancellation_token),
-    );
-
-    let json_log_path = match global_args.log_file.as_ref() {
-        None => None,
-        Some(path) if std::path::PathBuf::from(path).is_dir() => {
-            let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
-            let filename = format!("log_{timestamp}.ndjson");
-            Some(std::path::PathBuf::from(path).join(filename))
-        }
-        Some(path) => Some(std::path::PathBuf::from(path)),
-    };
-    let json_layer = if let Some(ref json_log_path) = json_log_path {
-        if let Some(parent) = json_log_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let file = File::create(json_log_path)?;
-        let file = Arc::new(Mutex::new(file));
-        let json_writer = BoxMakeWriter::new(move || {
-            file.lock()
-                .expect("failed to lock json log file")
-                .try_clone()
-                .expect("failed to clone json log file handle")
-        });
-
-        let json_layer = tracing_subscriber::fmt::layer()
-            .json()
+fn build_subscriber(
+    args: &GlobalArgs,
+    cancellation: CancellationToken,
+    stderr: BoxMakeWriter,
+) -> eyre::Result<impl tracing::Subscriber + Send + Sync + 'static> {
+    let inherited = std::env::var("RUST_LOG").ok();
+    let stderr_filter = parse_filter(stderr_filter_directive(args, inherited.as_deref()))
+        .wrap_err("invalid stderr log filter")?;
+    let file_filter = parse_filter(args.log_file_filter.as_deref().unwrap_or("debug"))
+        .wrap_err("invalid file log filter")?;
+    let stderr_diagnostics = teamy_tracing::Diagnostics::default();
+    let stderr_layer = match args.log_format.unwrap_or_default() {
+        LogFormat::Text => tracing_subscriber::fmt::layer()
+            .log_internal_errors(false)
+            .pretty()
+            .without_time()
+            .with_target(true)
             .with_file(true)
-            .with_target(false)
             .with_line_number(true)
-            .with_writer(json_writer)
-            .with_filter(default_log_filter(global_args)?);
-        Some(json_layer)
+            .with_ansi(std::io::stderr().is_terminal())
+            .with_writer(stderr)
+            .with_filter(stderr_filter.and(filter_fn(stderr_event)))
+            .boxed(),
+        LogFormat::Ndjson => tracing_subscriber::fmt::layer()
+            .log_internal_errors(false)
+            .fmt_fields(teamy_tracing::FacetJsonFields::new(
+                stderr_diagnostics.clone(),
+            ))
+            .with_ansi(false)
+            .with_target(true)
+            .with_file(true)
+            .with_line_number(true)
+            .event_format(
+                teamy_tracing::FacetJson::default()
+                    .with_diagnostics(stderr_diagnostics)
+                    .with_file(true)
+                    .with_line_number(true)
+                    .with_target(true),
+            )
+            .with_writer(stderr)
+            .with_filter(stderr_filter.and(filter_fn(stderr_event)))
+            .boxed(),
+    };
+    let subscriber = Registry::default()
+        .with(stderr_layer)
+        .with(args.stop_after.stop_after_span_layer(cancellation));
+    let file_layer = if let Some(path) = args.log_file.as_deref() {
+        let file_diagnostics = teamy_tracing::Diagnostics::default();
+        let path = std::path::Path::new(path);
+        eyre::ensure!(!path.is_dir(), "--log-file requires an explicit file path");
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent).wrap_err("cannot create log parent directory")?;
+        }
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .wrap_err("cannot open log destination")?;
+        // The guard lives for the formatter's complete record, rather than just handle cloning.
+        let writer = BoxMakeWriter::new(Mutex::new(file));
+        let layer = match args.log_file_format.unwrap_or(LogFormat::Ndjson) {
+            LogFormat::Text => tracing_subscriber::fmt::layer()
+                .log_internal_errors(false)
+                .with_ansi(false)
+                .with_target(true)
+                .with_file(true)
+                .with_line_number(true)
+                .with_writer(writer)
+                .with_span_events(FmtSpan::CLOSE)
+                .with_filter(file_filter.and(filter_fn(exclude_tracy_frame_mark)))
+                .boxed(),
+            LogFormat::Ndjson => tracing_subscriber::fmt::layer()
+                .log_internal_errors(false)
+                .fmt_fields(teamy_tracing::FacetJsonFields::new(
+                    file_diagnostics.clone(),
+                ))
+                .with_ansi(false)
+                .with_target(true)
+                .with_file(true)
+                .with_line_number(true)
+                .with_writer(writer)
+                .with_span_events(FmtSpan::CLOSE)
+                .event_format(
+                    teamy_tracing::FacetJson::default()
+                        .with_diagnostics(file_diagnostics)
+                        .with_file(true)
+                        .with_line_number(true)
+                        .with_target(true),
+                )
+                .with_filter(file_filter.and(filter_fn(exclude_tracy_frame_mark)))
+                .boxed(),
+        };
+        Some(layer)
     } else {
         None
     };
-    let subscriber = subscriber.with(json_layer);
-
+    let subscriber = subscriber.with(file_layer);
     #[cfg(all(feature = "tracy", not(test)))]
-    let subscriber =
-        subscriber.with(tracing_tracy::TracyLayer::default().with_filter(tracy_log_filter()?));
-
-    if let Err(error) = subscriber.try_init() {
-        report_logging_init_failure(&error);
-        return Ok(());
-    }
-
-    #[cfg(all(feature = "tracy", not(test)))]
-    tracing::info!(
-        "Tracy profiling layer added, memory usage will increase until a client is connected"
+    let subscriber = subscriber.with(
+        tracing_tracy::TracyLayer::default()
+            .with_filter(parse_filter(&tracy_log_filter_directives().join(","))?),
     );
-
-    debug!(
-        ?json_log_path,
-        debug = global_args.debug,
-        "Tracing initialized"
-    );
-    Ok(())
+    Ok(subscriber)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[derive(Debug, facet::Facet)]
+    struct Line {
+        level: String,
+    }
+    #[test]
+    fn stderr_filter_precedence_is_explicit_then_debug_then_environment() {
+        let mut args = GlobalArgs::default();
+        assert_eq!(stderr_filter_directive(&args, None), "info");
+        assert_eq!(stderr_filter_directive(&args, Some("warn")), "warn");
+        args.debug = true;
+        assert_eq!(stderr_filter_directive(&args, Some("off")), "debug");
+        args.log_filter = Some("error,fixture=trace".into());
+        assert_eq!(
+            stderr_filter_directive(&args, Some("off")),
+            "error,fixture=trace"
+        );
+    }
 
     #[test]
-    fn user_log_filter_does_not_change_tracy_trace_filter() {
-        let global_args = GlobalArgs {
-            log_filter: Some(String::from("error")),
+    fn concurrent_file_records_remain_complete_and_independent() {
+        let path = std::env::temp_dir().join(format!(
+            "teamy-records-{}-{}.ndjson",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let args = GlobalArgs {
+            log_filter: Some("off".into()),
+            log_file: Some(path.to_string_lossy().into_owned()),
             ..GlobalArgs::default()
         };
+        let subscriber = build_subscriber(
+            &args,
+            CancellationToken::new(),
+            BoxMakeWriter::new(std::io::sink),
+        )
+        .unwrap();
+        let dispatch = tracing::Dispatch::new(subscriber);
+        std::thread::scope(|scope| {
+            for worker in 0..4 {
+                let dispatch = dispatch.clone();
+                scope.spawn(move || {
+                    tracing::dispatcher::with_default(&dispatch, || {
+                        for sequence in 0..40 {
+                            tracing::debug!(worker, sequence, "complete record");
+                        }
+                    });
+                });
+            }
+        });
 
-        default_log_filter(&global_args).expect("human log filter should parse");
-        assert_eq!(tracy_log_filter_directives()[0], "trace");
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(text.lines().count(), 160);
+        for line in text.lines() {
+            assert_eq!(facet_json::from_str::<Line>(line).unwrap().level, "DEBUG");
+        }
+        drop(dispatch);
+        std::fs::remove_file(path).unwrap();
     }
 }

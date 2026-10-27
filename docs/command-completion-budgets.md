@@ -1,0 +1,8 @@
+# Command completion budgets
+
+Every successful subcommand returns `CliOutput` with an explicit `elapsed_duration_warn_threshold: Option<Duration>`. Constructors require the budget: `CliOutput::facet(value, Some(Duration::from_secs(1)))` or `CliOutput::none(None)`. There is no default or CLI-struct attribute. Parent dispatch forwards the receipt without replacing its budget. The field is execution metadata and is never added to JSON, CSV or text result data.
+
+The top level captures `Instant::now()` immediately before invocation, renders output, then compares elapsed time to the returned budget. It warns only for strictly greater elapsed time. Fields are `elapsed_duration_ms` and `elapsed_duration_warn_threshold_ms`. This completion-time warning cannot detect a hung command or warn before a result returns. Invocation failures have no returned budget and keep their existing safe diagnostics. A returned output whose rendering fails still has its budget checked; the original rendering error remains the result.
+
+Choose budgets from expected work, not from observed elapsed time. Path inspection receives one second; detached folder opening receives three seconds. Template init receives three seconds plus 20 ms per inventory file. `None` is an explicit exemption for indefinitely running serve/watch, unbounded archival or user-interactive approval operations; document why at the return site. Short planning variants of interactive commands should still return a finite budget. Separate phases may emit useful counts, bytes, rates or ETA directly through tracing; no mandatory progress schema is involved.
+

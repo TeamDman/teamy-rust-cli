@@ -25,6 +25,6 @@ impl HomeOpenArgs {
                 crate::paths::APP_HOME.0.display()
             )
         })?;
-        Ok(CliOutput::none())
+        Ok(CliOutput::none(Some(std::time::Duration::from_secs(3))))
     }
 }

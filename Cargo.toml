@@ -18,16 +18,22 @@ chrono = "0.4"
 color-eyre = "0.6.5"
 eyre = "0.6.12"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3.19", default-features = false, features = [
+    "ansi",
+    "env-filter",
+    "fmt",
+    "registry",
+] }
+teamy-tracing = "=0.1.0"
 tracing-tracy = { version = "0.11", optional = true, default-features = false, features = ["enable", "system-tracing", "context-switch-tracing", "sampling", "code-transfer", "callstack-inlines", "only-localhost"] }
 directories-next = "2"
 tokio = { version = "1.49.0", features = ["full"] }
-teamy-cancellation = { git = "https://github.com/TeamDman/teamy-cancellation.git", tag = "v0.3.1", features = ["figue", "arbitrary"] }
-facet = { git = "https://github.com/TeamDman/facet.git", rev = "2bfd3c2ee51cd9bdc89bb13f6e52f323ddfc25a9", package = "facet", features = ["uuid", "compact_str", "chrono", "net"] }
-facet-csv = { git = "https://github.com/TeamDman/facet.git", rev = "2bfd3c2ee51cd9bdc89bb13f6e52f323ddfc25a9", package = "facet-csv" }
-facet-json = { git = "https://github.com/TeamDman/facet.git", rev = "2bfd3c2ee51cd9bdc89bb13f6e52f323ddfc25a9", package = "facet-json" }
-facet-pretty = { git = "https://github.com/TeamDman/facet.git", rev = "2bfd3c2ee51cd9bdc89bb13f6e52f323ddfc25a9", package = "facet-pretty" }
-figue = { git = "https://github.com/TeamDman/facet.git", rev = "2bfd3c2ee51cd9bdc89bb13f6e52f323ddfc25a9", package = "figue", features = ["arbitrary"] }
+teamy-cancellation = { version = "=0.7.1", features = ["figue", "arbitrary", "async"] }
+facet = { package = "teamy-facet", version = "=0.50.0-rc.7", features = ["uuid", "compact_str", "chrono", "net", "reflect"] }
+facet-csv = { package = "teamy-facet-csv", version = "=0.50.0-rc.9" }
+facet-json = { package = "teamy-facet-json", version = "=0.50.0-rc.9" }
+facet-pretty = { package = "teamy-facet-pretty", version = "=0.50.0-rc.7" }
+figue = { package = "teamy-figue", version = "=6.0.0-rc.5", features = ["arbitrary"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]
@@ -41,7 +47,7 @@ default = []
 tracy = ["dep:tracing-tracy"]
 
 [build-dependencies]
-embed-resource = "3.0.6"
+embed-resource = { package = "teamy-embed-resource", version = "=0.1.0", default-features = false }
 
 [lints.rust]
 ambiguous_negative_literals = "warn"

@@ -16,6 +16,6 @@ impl CacheCleanArgs {
         reason = "command invoke methods share the async CLI dispatch shape"
     )]
     pub async fn invoke(self) -> Result<CliOutput> {
-        Ok(CliOutput::none())
+        Ok(CliOutput::none(Some(std::time::Duration::from_secs(1))))
     }
 }

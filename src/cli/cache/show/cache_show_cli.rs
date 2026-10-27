@@ -21,8 +21,11 @@ impl CacheShowArgs {
         reason = "command invoke methods share the async CLI dispatch shape"
     )]
     pub async fn invoke(self) -> Result<CliOutput> {
-        Ok(CliOutput::facet(CacheShowReport {
-            path: crate::paths::CACHE_DIR.display().to_string(),
-        }))
+        Ok(CliOutput::facet(
+            CacheShowReport {
+                path: crate::paths::CACHE_DIR.display().to_string(),
+            },
+            Some(std::time::Duration::from_secs(1)),
+        ))
     }
 }
