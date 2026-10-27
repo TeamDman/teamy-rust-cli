@@ -26,7 +26,7 @@ fn default_log_filter(global_args: &GlobalArgs) -> eyre::Result<EnvFilter> {
         .map_err(Into::into)
 }
 
-#[cfg(feature = "tracy")]
+#[cfg(any(feature = "tracy", test))]
 fn tracy_log_filter_directives() -> [&'static str; 7] {
     [
         "trace",
