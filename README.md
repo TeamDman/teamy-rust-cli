@@ -7,7 +7,7 @@
 [![license](https://img.shields.io/crates/l/teamy-rust-cli.svg)](https://crates.io/crates/teamy-rust-cli)
 
 
-<image height="100" src="./resources/main.png"/>
+<image height="100" src="resources/main.png"/>
 
 Opinionated starting point for building small and medium Rust command line applications.
 
