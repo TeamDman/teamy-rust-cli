@@ -26,6 +26,18 @@ fn default_log_filter(global_args: &GlobalArgs) -> eyre::Result<EnvFilter> {
         .map_err(Into::into)
 }
 
+fn tracy_log_filter_directives() -> [&'static str; 7] {
+    [
+        "trace",
+        "cranelift_codegen=warn",
+        "cranelift_frontend=warn",
+        "cranelift_jit=warn",
+        "cranelift_native=warn",
+        "regalloc2=warn",
+        "wasmtime=warn",
+    ]
+}
+
 #[expect(
     clippy::disallowed_macros,
     reason = "Logging initialization failed, so this bootstrap diagnostic cannot rely on the requested subscriber"
