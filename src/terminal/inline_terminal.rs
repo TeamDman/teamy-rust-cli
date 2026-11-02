@@ -10,7 +10,11 @@ use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 use std::io::Write;
 use std::io::{self};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use unicode_width::UnicodeWidthChar;
+
+static TERMINAL_OWNED: AtomicBool = AtomicBool::new(false);
 
 /// Insert one escaped, width-limited line above an inline viewport.
 /// # Errors
@@ -41,6 +45,8 @@ pub fn print_above<B: Backend>(terminal: &mut Terminal<B>, text: &str) -> Result
 pub struct InlineTerminal<W: Write> {
     terminal: Option<Terminal<CrosstermBackend<W>>>,
     raw_active: bool,
+    owned: bool,
+    screen_failed: bool,
 }
 
 impl<W: Write> InlineTerminal<W> {
@@ -54,7 +60,19 @@ impl<W: Write> InlineTerminal<W> {
                 "inline height must be nonzero",
             ));
         }
-        enable_raw_mode()?;
+        if TERMINAL_OWNED
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "inline terminal already owned or restoration failed",
+            ));
+        }
+        if let Err(error) = enable_raw_mode() {
+            TERMINAL_OWNED.store(false, Ordering::Release);
+            return Err(error);
+        }
         let terminal = Terminal::with_options(
             CrosstermBackend::new(writer),
             TerminalOptions {
@@ -65,9 +83,14 @@ impl<W: Write> InlineTerminal<W> {
             Ok(terminal) => Ok(Self {
                 terminal: Some(terminal),
                 raw_active: true,
+                owned: true,
+                screen_failed: false,
             }),
             Err(error) => match disable_raw_mode() {
-                Ok(()) => Err(error),
+                Ok(()) => {
+                    TERMINAL_OWNED.store(false, Ordering::Release);
+                    Err(error)
+                }
                 Err(restore) => Err(io::Error::other(format!(
                     "terminal setup failed: {error}; raw-mode restoration failed: {restore}"
                 ))),
@@ -82,6 +105,9 @@ impl<W: Write> InlineTerminal<W> {
     /// # Errors
     /// Returns an error if clearing, cursor restoration, flushing or raw-mode restoration fails.
     pub fn close(&mut self) -> io::Result<()> {
+        if !self.owned {
+            return Ok(());
+        }
         let screen = if let Some(mut terminal) = self.terminal.take() {
             let origin = terminal.get_frame().area().as_position();
             let clear = terminal.clear();
@@ -92,6 +118,7 @@ impl<W: Write> InlineTerminal<W> {
         } else {
             Ok(())
         };
+        self.screen_failed |= screen.is_err();
         let raw = if self.raw_active {
             let result = disable_raw_mode();
             if result.is_ok() {
@@ -101,6 +128,15 @@ impl<W: Write> InlineTerminal<W> {
         } else {
             Ok(())
         };
+        if !self.screen_failed && raw.is_ok() {
+            self.owned = false;
+            TERMINAL_OWNED.store(false, Ordering::Release);
+        }
+        if self.screen_failed && screen.is_ok() {
+            return Err(io::Error::other(
+                "terminal screen restoration previously failed",
+            ));
+        }
         screen.and(raw)
     }
 }

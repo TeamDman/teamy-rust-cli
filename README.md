@@ -25,6 +25,7 @@ This template exists to remove the repeated setup work for a new CLI project. It
 - PowerShell helpers for running the full quality gate and temporarily supporting the legacy initializer
 - cancellation signals and linked execution scopes from `teamy-cancellation`
 - optional caller-owned inline terminal, bounded log replay and screen navigation; see [terminal foundation](docs/terminal-foundation.md)
+- optional Windows tray and owned-console state adapter with an application-supplied backend; no native tray listener is activated by the template
 
 ## Quick Start
 
