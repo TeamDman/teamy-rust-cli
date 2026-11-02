@@ -1,6 +1,8 @@
 pub mod cli;
 pub mod logging_init;
 pub mod paths;
+#[cfg(feature = "inline-terminal")]
+pub mod terminal;
 #[cfg(windows)]
 mod windows_startup;
 

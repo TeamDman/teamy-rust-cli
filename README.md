@@ -24,6 +24,7 @@ This template exists to remove the repeated setup work for a new CLI project. It
 - `init` scaffolding command for creating new Teamy Rust CLI repositories
 - PowerShell helpers for running the full quality gate and temporarily supporting the legacy initializer
 - cancellation signals and linked execution scopes from `teamy-cancellation`
+- optional caller-owned inline terminal, bounded log replay and screen navigation; see [terminal foundation](docs/terminal-foundation.md)
 
 ## Quick Start
 
