@@ -128,3 +128,40 @@ fn untrusted_log_is_escaped_above_inline_view() {
     assert!(visible.contains("log\\u{1b}[31m"));
     assert!(visible.contains("overview"));
 }
+
+#[test]
+fn inline_view_redraws_after_backend_resize() {
+    use ratatui::Terminal;
+    use ratatui::TerminalOptions;
+    use ratatui::Viewport;
+    use ratatui::backend::TestBackend;
+    use ratatui::widgets::Paragraph;
+    let mut terminal = Terminal::with_options(
+        TestBackend::new(48, 8),
+        TerminalOptions {
+            viewport: Viewport::Inline(3),
+        },
+    )
+    .unwrap();
+    terminal
+        .draw(|frame| frame.render_widget(Paragraph::new("overview"), frame.area()))
+        .unwrap();
+    terminal.backend_mut().resize(24, 8);
+    terminal.autoresize().unwrap();
+    print_above(&mut terminal, "after resize").unwrap();
+    terminal
+        .draw(|frame| frame.render_widget(Paragraph::new("overview"), frame.area()))
+        .unwrap();
+    assert_eq!(terminal.backend().buffer().area.width, 24);
+    let buffer = terminal.backend().buffer();
+    let visible = (0..buffer.area.height)
+        .map(|y| {
+            (0..buffer.area.width)
+                .map(|x| buffer[(x, y)].symbol())
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(visible.contains("after resize"));
+    assert!(visible.contains("overview"));
+}

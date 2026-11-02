@@ -43,12 +43,16 @@ windows = { version = "0.62.2", features = [
 [features]
 default = []
 inline-terminal = ["dep:crossterm", "dep:ratatui", "dep:unicode-width"]
-windows-foundation = []
+windows-foundation = ["windows/Win32_Foundation", "windows/Win32_Graphics_Gdi", "windows/Win32_Security", "windows/Win32_System_LibraryLoader", "windows/Win32_System_Threading", "windows/Win32_UI_Shell", "windows/Win32_UI_WindowsAndMessaging"]
 tracy = ["dep:tracing-tracy"]
 
 [[example]]
 name = "inline_pty_probe"
 required-features = ["inline-terminal"]
+
+[[example]]
+name = "windows_tray_probe"
+required-features = ["windows-foundation"]
 
 [build-dependencies]
 embed-resource = { package = "teamy-embed-resource", version = "=0.1.0", default-features = false }

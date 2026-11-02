@@ -1,5 +1,7 @@
-//! Injectable tray and console state; no native listener is started here.
+//! Optional tray and console state. Nothing is started without an explicit call.
 use std::io;
+
+pub mod native;
 
 /// The caller must establish ownership; inherited and `ConPTY` hosts are shared.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,6 +56,11 @@ impl<B: DesktopBackend> DesktopSession<B> {
     #[must_use]
     pub fn tray_active(&self) -> bool {
         self.tray_active
+    }
+    /// Recover the backend after explicitly shutting the session down.
+    #[must_use]
+    pub fn into_backend(self) -> B {
+        self.backend
     }
     /// Explicitly create a tray entry.
     /// # Errors

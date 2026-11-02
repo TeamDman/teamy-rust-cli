@@ -32,27 +32,75 @@ using such navigation and logs after an explicit integration review.
 ## Windows state adapter
 
 The separate `windows-foundation` feature provides a `cfg(windows)`
-`DesktopSession` with an injected `DesktopBackend`. The caller explicitly
-creates the tray, routes actions on its own message loop, and calls `shutdown`
-to restore an owned hidden console and remove the tray. The adapter refuses
-show/hide for shared or unavailable contexts and changes recorded state only
-after a backend succeeds. It contains no native backend, message loop, input
-listener, or automatic activation. The caller must establish console ownership
-from actual launch context; a handle alone is insufficient evidence. An
-application such as Defibrillator can adapt its existing state and backend to
-this interface after reviewing its separate ownership and input lifecycle.
+`DesktopSession` and an injectable `DesktopBackend`. The optional
+`NativeDesktopBackend` starts an invisible top-level window and its message
+thread only when the caller explicitly activates the tray. A bounded queue
+delivers `Show`, `Hide`, `Exit`, or a native error; the application interprets
+these typed events and can inspect the queue's dropped-event counter. The tray
+thread re-adds its icon after the `TaskbarCreated` broadcast. A private kernel
+event requests shutdown; the explicit wait is bounded to two seconds and a
+timeout leaves shutdown pending for retry. The backend attempts to restore an
+owned hidden console and remove the icon on cleanup. Dropping is best effort;
+call and check `shutdown`.
+
+The adapter refuses show/hide for shared or unavailable contexts. The native
+backend additionally requires an `OwnedConsole` token obtained only through a
+successful explicit `AllocConsole` call after checking that the process has no
+console. Allocation creates a window and changes that process's standard
+handles; it is never automatic. Revalidation checks that the same window is
+still attached before changing visibility or detaching. The application must
+own and serialize its process-wide console lifecycle; unrelated code can still
+change it behind this guard. `GetConsoleWindow` alone is not proof of ownership:
+under ConPTY its handle is not the visible terminal window. See Microsoft's
+[console documentation](https://learn.microsoft.com/en-us/windows/console/getconsolewindow)
+and [taskbar creation notification](https://learn.microsoft.com/en-us/windows/win32/shell/taskbar#taskbar-creation-notification).
+
+The native backend has only been compiled and tested through injected state and
+shell-restart logic. It has not been activated or visually qualified. Codex
+and Defibrillator do not yet use it; Defibrillator can adapt its existing state
+and backend after reviewing its separate ownership and input lifecycle.
 
 ## Planned Windows seams
 
-Future opt-in native tray and console backends can use a dedicated
-message-loop owner with explicit shutdown and join. Model an application-owned
-visible or hidden console separately from inherited, ConPTY, and unavailable
-contexts. Only an explicitly owned console may be hidden or restored. In
-particular, `GetConsoleWindow` under ConPTY is not authority to hide the user's
-Windows Terminal. Piing's owned/inherited distinction and tb's tray message
-handling are useful prior art, not implementations supplied by this feature.
-Raw Input capture, global hotkeys, elevation and service installation require
-separate optional APIs and review; nothing here activates them.
+Piing's owned/inherited distinction and tb's tray message handling are prior
+art. Raw Input capture, global hotkeys, elevation and service installation
+require separate optional APIs and review; nothing here activates them.
+
+## Later manual tray qualification
+
+After the graphics hold is lifted and a user explicitly opts in, build the
+synthetic GUI-subsystem probe with
+`cargo build --offline --locked --features windows-foundation --example windows_tray_probe`.
+From PowerShell in this repository, start the shared-state probe:
+
+```powershell
+$trayProbe = Join-Path (Get-Location) 'target/debug/examples/windows_tray_probe.exe'
+$sharedProbe = Start-Process -FilePath $trayProbe -ArgumentList '--shared' -WindowStyle Hidden -PassThru
+```
+
+Right-click the **Teamy** notification icon (including the overflow area),
+choose **Show console** and **Hide console**, and confirm the existing terminal
+is unchanged; choose **Exit**, then check `$sharedProbe.WaitForExit(10000)` and
+`$sharedProbe.ExitCode` for `True` and zero.
+This mode deliberately models a shared console without attaching to one, so it
+does not prove detection in a real ConPTY host.
+
+Separately start the owned-console probe, which intentionally creates a visible
+window:
+
+```powershell
+$ownedProbe = Start-Process -FilePath $trayProbe -ArgumentList '--owned' -WindowStyle Normal -PassThru
+```
+
+It explicitly allocates a
+new standalone console; use the tray menu to hide and show that new window,
+then choose **Exit** and check `$ownedProbe.WaitForExit(10000)` and
+`$ownedProbe.ExitCode` for `True` and zero. Confirm the icon disappears. The existing
+terminal must stay visible. The probe reads no keys, session logs, or telemetry
+and writes no files or settings; its only input is those tray menu selections.
+Do not restart Explorer for this minimal test. Real Explorer restart recovery,
+additional terminal hosts and actual ConPTY ownership checks remain separate
+unqualified tests. Neither probe has been run.
 
 ## Template provenance
 
