@@ -78,3 +78,39 @@ fn failed_backend_actions_do_not_change_recorded_state() {
     assert_eq!(session.console(), ConsoleState::OwnedVisible);
     session.shutdown().unwrap();
 }
+
+#[derive(Debug, Default)]
+struct RestoreFails(Rc<RefCell<Vec<&'static str>>>);
+impl DesktopBackend for RestoreFails {
+    fn create_tray(&mut self) -> io::Result<()> {
+        self.0.borrow_mut().push("create");
+        Ok(())
+    }
+    fn remove_tray(&mut self) -> io::Result<()> {
+        self.0.borrow_mut().push("remove");
+        Ok(())
+    }
+    fn set_owned_console_visible(&mut self, visible: bool) -> io::Result<()> {
+        self.0
+            .borrow_mut()
+            .push(if visible { "show" } else { "hide" });
+        if visible {
+            Err(io::Error::other("restore"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[test]
+fn failed_restore_still_attempts_tray_removal_and_keeps_hidden_state() {
+    let fake = RestoreFails::default();
+    let calls = Rc::clone(&fake.0);
+    let mut session = DesktopSession::new(fake, ConsoleState::OwnedVisible);
+    session.activate().unwrap();
+    session.handle(TrayAction::Hide).unwrap();
+    session.shutdown().unwrap_err();
+    assert_eq!(session.console(), ConsoleState::OwnedHidden);
+    assert!(!session.tray_active());
+    assert_eq!(*calls.borrow(), ["create", "hide", "show", "remove"]);
+}
