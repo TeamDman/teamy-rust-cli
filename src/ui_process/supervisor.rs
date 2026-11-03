@@ -24,6 +24,8 @@ const QUEUE_CAPACITY: usize = 8;
 #[derive(Debug)]
 pub enum ChildEvent {
     Message(Message),
+    /// The child's output pipe closed, even if the process is still alive.
+    Disconnected,
     Exited(ExitStatus),
     Failed(String),
 }
@@ -71,7 +73,7 @@ fn validate_reply(
                     session.outstanding.pop_front();
                 }
             }
-            Message::Close { .. } if session.ready => {}
+            Message::Close { .. } | Message::Intent { .. } if session.ready => {}
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
@@ -177,10 +179,10 @@ impl Supervisor {
                 loop {
                     let event = match read_next(&mut output) {
                         Ok(Some(message)) => ChildEvent::Message(message),
-                        Ok(None) => break,
+                        Ok(None) => ChildEvent::Disconnected,
                         Err(error) => ChildEvent::Failed(format!("UI read: {error}")),
                     };
-                    let stop = matches!(event, ChildEvent::Failed(_));
+                    let stop = matches!(event, ChildEvent::Failed(_) | ChildEvent::Disconnected);
                     if in_tx.try_send(event).is_err() {
                         reader_overflow.store(true, Ordering::Release);
                         break;
@@ -222,6 +224,27 @@ impl Supervisor {
     /// # Errors
     /// Returns an error for absent/stale/unready children or backpressure.
     pub fn queue(&mut self, message: Message) -> io::Result<()> {
+        if !matches!(
+            message,
+            Message::Hello { .. }
+                | Message::Close { .. }
+                | Message::Record { .. }
+                | Message::Gap { .. }
+                | Message::AppEvent { .. }
+        ) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid owner message",
+            ));
+        }
+        if let Message::AppEvent { payload, .. } = &message
+            && payload.len() > super::MAX_APP_BYTES
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "application message exceeds bound",
+            ));
+        }
         if message.generation() != self.generation {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,

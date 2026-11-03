@@ -10,6 +10,7 @@ pub use history::Entry;
 pub use history::History;
 pub use history::HistoryStats;
 pub use launcher::ChildConsole;
+pub use protocol::MAX_APP_BYTES;
 pub use protocol::MAX_FRAME_BYTES;
 pub use protocol::Message;
 pub use protocol::read_message;

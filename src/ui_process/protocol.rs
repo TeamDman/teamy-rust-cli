@@ -3,6 +3,8 @@ use std::io::Write;
 use std::io::{self};
 
 pub const MAX_FRAME_BYTES: usize = 65_536;
+/// Application-specific typed payloads have a smaller, independently bounded budget.
+pub const MAX_APP_BYTES: usize = 4096;
 const VERSION: u8 = 1;
 
 /// Fixed typed control messages; record payloads are interpreted by the application.
@@ -31,6 +33,18 @@ pub enum Message {
     Close {
         generation: u64,
     },
+    /// Child-to-owner application intent; the consumer validates the kind and payload.
+    Intent {
+        generation: u64,
+        kind: u16,
+        payload: Vec<u8>,
+    },
+    /// Owner-to-child transient application state, independent of retained history.
+    AppEvent {
+        generation: u64,
+        kind: u16,
+        payload: Vec<u8>,
+    },
 }
 
 impl Message {
@@ -42,7 +56,9 @@ impl Message {
             | Self::Record { generation, .. }
             | Self::Gap { generation, .. }
             | Self::Ack { generation, .. }
-            | Self::Close { generation } => *generation,
+            | Self::Close { generation }
+            | Self::Intent { generation, .. }
+            | Self::AppEvent { generation, .. } => *generation,
         }
     }
 }
@@ -51,6 +67,14 @@ impl Message {
 /// # Errors
 /// Returns an error for oversized payloads or a failed write/flush.
 pub fn write_message(mut output: impl Write, message: &Message) -> io::Result<()> {
+    if let Message::Intent { payload, .. } | Message::AppEvent { payload, .. } = message
+        && payload.len() > MAX_APP_BYTES
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "application message exceeds bound",
+        ));
+    }
     if let Message::Record { payload, .. } = message
         && payload.len() > MAX_FRAME_BYTES - 18
     {
@@ -67,6 +91,8 @@ pub fn write_message(mut output: impl Write, message: &Message) -> io::Result<()
         Message::Gap { generation, .. } => (4, *generation),
         Message::Ack { generation, .. } => (5, *generation),
         Message::Close { generation } => (6, *generation),
+        Message::Intent { generation, .. } => (7, *generation),
+        Message::AppEvent { generation, .. } => (8, *generation),
     };
     body.extend_from_slice(&[VERSION, tag]);
     body.extend_from_slice(&generation.to_be_bytes());
@@ -84,6 +110,10 @@ pub fn write_message(mut output: impl Write, message: &Message) -> io::Result<()
             body.extend_from_slice(&rejected.to_be_bytes());
         }
         Message::Ack { sequence, .. } => body.extend_from_slice(&sequence.to_be_bytes()),
+        Message::Intent { kind, payload, .. } | Message::AppEvent { kind, payload, .. } => {
+            body.extend_from_slice(&kind.to_be_bytes());
+            body.extend_from_slice(payload);
+        }
         _ => {}
     }
     if body.len() > MAX_FRAME_BYTES {
@@ -160,7 +190,64 @@ pub fn read_next(mut input: impl Read) -> io::Result<Option<Message>> {
             sequence: number(&body[10..18])?,
         }),
         (6, 10) => Ok(Message::Close { generation }),
+        (tag @ (7 | 8), 12..) if len - 12 <= MAX_APP_BYTES => {
+            let kind = u16::from_be_bytes([body[10], body[11]]);
+            let payload = body[12..].to_vec();
+            if tag == 7 {
+                Ok(Message::Intent {
+                    generation,
+                    kind,
+                    payload,
+                })
+            } else {
+                Ok(Message::AppEvent {
+                    generation,
+                    kind,
+                    payload,
+                })
+            }
+        }
         _ => Err(invalid()),
     }?;
     Ok(Some(message))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn application_messages_enforce_wire_bounds_and_shape() {
+        let message = Message::Intent {
+            generation: 8,
+            kind: 17,
+            payload: vec![3; MAX_APP_BYTES],
+        };
+        let mut wire = Vec::new();
+        write_message(&mut wire, &message).unwrap();
+        assert_eq!(read_message(&wire[..]).unwrap(), message);
+        assert_eq!(
+            write_message(
+                Vec::new(),
+                &Message::Intent {
+                    generation: 8,
+                    kind: 17,
+                    payload: vec![0; MAX_APP_BYTES + 1]
+                }
+            )
+            .unwrap_err()
+            .kind(),
+            io::ErrorKind::InvalidInput
+        );
+        let mut oversized = Vec::new();
+        oversized.extend_from_slice(&u32::try_from(13 + MAX_APP_BYTES).unwrap().to_be_bytes());
+        oversized.extend_from_slice(&[VERSION, 7]);
+        oversized.extend_from_slice(&8u64.to_be_bytes());
+        oversized.extend_from_slice(&17u16.to_be_bytes());
+        oversized.resize(4 + 13 + MAX_APP_BYTES, 0);
+        assert_eq!(
+            read_message(&oversized[..]).unwrap_err().kind(),
+            io::ErrorKind::InvalidData
+        );
+    }
 }

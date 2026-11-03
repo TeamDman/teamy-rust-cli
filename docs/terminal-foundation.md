@@ -169,3 +169,18 @@ logs. Its `close-error` mode injects a screen-write failure and confirms that
 raw mode is restored while later ownership is refused. Run each mode in a
 synthetic PTY; other terminal hosts and external terminal writers remain outside
 the probe's guarantees.
+
+## Application messages and disconnects
+
+`Message::Intent` carries a child-to-owner application intent and `Message::AppEvent`
+carries transient owner-to-child state. Each has a numeric kind and at most 4096
+payload bytes; application adapters must define a closed typed enum, validate every
+kind and payload, and reject unknown or invalid values. These messages never authorize
+arbitrary commands. Generation checks and bounded queues apply to both directions;
+transient state is not retained automatically and must not become a keystroke log.
+
+`ChildEvent::Disconnected` reports clean pipe EOF independently of process exit.
+The owner must immediately cancel any UI-bound operation such as binding capture,
+preserve the previous binding, and call `Supervisor::shutdown` with an explicit
+bounded deadline. On timeout it terminates only the owned child and reports the
+timeout. Background input matching and retained history remain owner-managed.

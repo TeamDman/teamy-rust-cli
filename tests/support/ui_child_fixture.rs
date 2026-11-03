@@ -54,6 +54,21 @@ fn main() -> io::Result<()> {
         write_message(&mut output, &Message::Close { generation })?;
         return Ok(());
     }
+    if mode == "disconnect" {
+        drop(output);
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        return Ok(());
+    }
+    if mode == "intent" {
+        write_message(
+            &mut output,
+            &Message::Intent {
+                generation,
+                kind: 7,
+                payload: vec![1, 2],
+            },
+        )?;
+    }
     if mode == "bad-ack" {
         write_message(
             &mut output,
@@ -81,7 +96,7 @@ fn main() -> io::Result<()> {
                     sequence,
                 },
             )?,
-            Ok(Message::Gap { .. }) => {}
+            Ok(Message::Gap { .. } | Message::AppEvent { .. }) => {}
             Ok(Message::Close { .. }) => return Ok(()),
             Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => return Ok(()),
             Ok(_) => return Err(io::Error::other("unexpected message")),

@@ -195,6 +195,68 @@ fn closing_ui_does_not_stop_owner_or_erase_history() {
 }
 
 #[test]
+fn disconnect_is_observed_while_child_is_alive_and_deadline_cleans_it_up() {
+    let mut supervisor = Supervisor::default();
+    spawn(&mut supervisor, "disconnect").unwrap();
+    wait_for(&mut supervisor, |event| {
+        matches!(event, ChildEvent::Disconnected)
+    });
+    assert!(supervisor.is_running());
+    assert_eq!(
+        supervisor
+            .shutdown(Duration::from_millis(10))
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::TimedOut
+    );
+    assert!(!supervisor.is_running());
+}
+
+#[test]
+fn application_intent_and_event_are_bounded_and_generation_checked() {
+    use teamy_rust_cli::ui_process::MAX_APP_BYTES;
+    let mut supervisor = Supervisor::default();
+    let generation = spawn(&mut supervisor, "intent").unwrap();
+    wait_for(&mut supervisor, |event| {
+        matches!(event, ChildEvent::Message(Message::Ready { .. }))
+    });
+    wait_for(
+        &mut supervisor,
+        |event| matches!(event, ChildEvent::Message(Message::Intent { kind: 7, payload, .. }) if payload == &[1, 2]),
+    );
+    supervisor
+        .queue(Message::AppEvent {
+            generation,
+            kind: 3,
+            payload: vec![4],
+        })
+        .unwrap();
+    assert_eq!(
+        supervisor
+            .queue(Message::AppEvent {
+                generation,
+                kind: 3,
+                payload: vec![0; MAX_APP_BYTES + 1]
+            })
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidInput
+    );
+    assert_eq!(
+        supervisor
+            .queue(Message::AppEvent {
+                generation: generation + 1,
+                kind: 3,
+                payload: vec![]
+            })
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidInput
+    );
+    supervisor.shutdown(Duration::from_secs(2)).unwrap();
+}
+
+#[test]
 fn relative_child_program_is_rejected() {
     let mut supervisor = Supervisor::default();
     assert_eq!(
