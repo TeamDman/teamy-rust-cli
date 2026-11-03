@@ -56,9 +56,36 @@ under ConPTY its handle is not the visible terminal window. See Microsoft's
 and [taskbar creation notification](https://learn.microsoft.com/en-us/windows/win32/shell/taskbar#taskbar-creation-notification).
 
 The native backend has only been compiled and tested through injected state and
-shell-restart logic. It has not been activated or visually qualified. Codex
-and Defibrillator do not yet use it; Defibrillator can adapt its existing state
-and backend after reviewing its separate ownership and input lifecycle.
+shell-restart logic. It has not been activated or visually qualified. Local
+Codex and Defibrillator tray implementations have copied or adapted the
+foundation; their current console and worker still share a process.
+
+## Console close and a separate UI process
+
+The current `OwnedConsole` is allocated in the calling process. Hiding that
+console does not guarantee that clicking its window Close button leaves the
+tray owner alive. The next shared design places the unelevated tray and worker
+in a background owner and its console UI in a separately spawned child. The
+owner retains bounded history and continues its work when the child closes;
+Show opens one replacement child and replays retained records with loss
+indicators. In tray mode, `q` closes the UI and tray Exit stops the owner.
+Ordinary attached-terminal commands keep their current exit behavior.
+
+The proposed private child channel uses bounded, versioned typed frames over
+explicitly inherited anonymous pipes, with one child generation at a time,
+strict handle inheritance, no shell or arbitrary commands, and explicit EOF,
+failure and shutdown handling. If stdin/stdout carry protocol frames, the
+child must open its console input and output separately; it cannot assume the
+redirected standard streams are a TTY. History stays in the owner rather than
+being acknowledged away by a child. The existing `TerminalLogBuffer` removes
+acknowledged records, so it needs a separate retained store or a deliberate
+contract change for reopen replay. UI loss cancels any in-progress shortcut
+capture and retains the previous binding. The shared contract and staged
+synthetic, Windows process and later opt-in close-button tests are in the
+adjacent Teamy Docs checkout's `src/terminal-ownership.md`, in “Keep the tray
+owner alive when the console closes.” This split is
+planned, not implemented; it does not promise survival of session shutdown or
+external job termination.
 
 ## Planned Windows seams
 
