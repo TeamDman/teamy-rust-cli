@@ -71,9 +71,9 @@ Show opens one replacement child and replays retained records with loss
 indicators. In tray mode, `q` closes the UI and tray Exit stops the owner.
 Ordinary attached-terminal commands keep their current exit behavior.
 
-The proposed private child channel uses bounded, versioned typed frames over
-explicitly inherited anonymous pipes, with one child generation at a time,
-strict handle inheritance, no shell or arbitrary commands, and explicit EOF,
+The private child channel uses bounded, versioned typed frames over anonymous
+pipes, with one child generation at a time, restricted handle access, no shell
+or arbitrary commands, and explicit EOF,
 failure and shutdown handling. If stdin/stdout carry protocol frames, the
 child must open its console input and output separately; it cannot assume the
 redirected standard streams are a TTY. History stays in the owner rather than
@@ -86,6 +86,32 @@ adjacent Teamy Docs checkout's `src/terminal-ownership.md`, in “Keep the tray
 owner alive when the console closes.” This split is
 planned, not implemented; it does not promise survival of session shutdown or
 external job termination.
+
+The optional `ui-process` feature now supplies a tested process and transport
+foundation, not yet a complete application split. `History` retains records
+independently of acknowledgements, with caller-selected record and byte limits
+and explicit eviction/rejection counts. Frames are limited to 64 KiB; the
+supervisor has bounded delivery queues and an acknowledgement window, rejects
+stale generations, and reports backpressure. Shutdown requests a clean close,
+then terminates only the child it started if the supplied deadline expires.
+
+On Windows the launcher creates anonymous pipes that are **never inheritable**
+and starts the child with handle inheritance disabled. The child verifies the
+parent process identity and creation time, then briefly opens that trusted
+parent with duplicate-handle access and duplicates the two designated pipe
+ends. This avoids both unrelated handles entering the child and a concurrent
+sibling inheriting the UI pipes. The child executable must be trusted and
+chosen by the application, not by a message from the UI. The bootstrap process
+identity and numeric handle values are passed in process arguments; they are
+not credentials. Other platforms currently use piped standard streams. In
+both cases the terminal UI must open its console separately.
+
+Synthetic hidden-child tests exercise framing, startup, reaping, crashes,
+stale replies, rejected acknowledgements, backpressure, history across
+reopening, and handle isolation with a positive control. They do not launch a
+console UI or prove close-button behavior, console host compatibility, or job
+object behavior. The actual tray and consumer integrations remain separate
+qualification work.
 
 ## Planned Windows seams
 

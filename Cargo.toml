@@ -1,6 +1,7 @@
 [package]
 # TODO(template): replace the package name, description, repository, documentation URL, and keywords in generated repositories.
 name = "teamy-rust-cli"
+default-run = "teamy-rust-cli"
 version = "0.1.0"
 edition = "2024"
 authors = ["TeamDman"]
@@ -43,6 +44,8 @@ windows = { version = "0.62.2", features = [
 [features]
 default = []
 inline-terminal = ["dep:crossterm", "dep:ratatui", "dep:unicode-width"]
+ui-process = ["windows/Wdk_System_Threading", "windows/Win32_Foundation", "windows/Win32_Security", "windows/Win32_System_Kernel", "windows/Win32_System_Pipes", "windows/Win32_System_Threading"]
+ui-process-fixtures = ["ui-process"]
 windows-foundation = ["windows/Win32_Foundation", "windows/Win32_Graphics_Gdi", "windows/Win32_Security", "windows/Win32_System_LibraryLoader", "windows/Win32_System_Threading", "windows/Win32_UI_Shell", "windows/Win32_UI_WindowsAndMessaging"]
 tracy = ["dep:tracing-tracy"]
 
@@ -53,6 +56,11 @@ required-features = ["inline-terminal"]
 [[example]]
 name = "windows_tray_probe"
 required-features = ["windows-foundation"]
+
+[[bin]]
+name = "ui-child-fixture"
+path = "tests/support/ui_child_fixture.rs"
+required-features = ["ui-process-fixtures"]
 
 [build-dependencies]
 embed-resource = { package = "teamy-embed-resource", version = "=0.1.0", default-features = false }

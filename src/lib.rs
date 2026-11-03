@@ -3,6 +3,8 @@ pub mod logging_init;
 pub mod paths;
 #[cfg(feature = "inline-terminal")]
 pub mod terminal;
+#[cfg(feature = "ui-process")]
+pub mod ui_process;
 #[cfg(all(windows, feature = "windows-foundation"))]
 pub mod windows_foundation;
 #[cfg(windows)]
