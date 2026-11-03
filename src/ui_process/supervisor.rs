@@ -43,6 +43,144 @@ struct Session {
     sent: u64,
     ack: u64,
     outstanding: VecDeque<u64>,
+    termination_requested: bool,
+}
+
+impl Session {
+    fn new(
+        child: Process,
+        bootstrap: Option<Bootstrap>,
+        outbound: Option<mpsc::SyncSender<Message>>,
+        inbound: mpsc::Receiver<ChildEvent>,
+        overflow: Arc<AtomicBool>,
+        writer: Option<JoinHandle<()>>,
+        reader: Option<JoinHandle<()>>,
+    ) -> Self {
+        Self {
+            child,
+            bootstrap,
+            outbound,
+            inbound,
+            overflow,
+            writer,
+            reader,
+            ready: false,
+            sent: 0,
+            ack: 0,
+            outstanding: VecDeque::new(),
+            termination_requested: false,
+        }
+    }
+}
+
+trait ManagedProcess {
+    fn has_exited(&mut self) -> io::Result<bool>;
+    fn terminate(&mut self) -> io::Result<()>;
+}
+
+impl ManagedProcess for Process {
+    fn has_exited(&mut self) -> io::Result<bool> {
+        Ok(self.try_wait()?.is_some())
+    }
+    fn terminate(&mut self) -> io::Result<()> {
+        self.kill()
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum StopOutcome {
+    Exited,
+    ForcedExited,
+    TerminationPending,
+}
+
+// No wait occurs after requesting termination: a still-live process stays owned.
+fn stop_process(
+    process: &mut impl ManagedProcess,
+    termination_requested: &mut bool,
+    timeout: Duration,
+) -> io::Result<StopOutcome> {
+    let deadline = Instant::now().checked_add(timeout).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "UI shutdown deadline exceeds clock range",
+        )
+    })?;
+    loop {
+        if process.has_exited()? {
+            return Ok(StopOutcome::Exited);
+        }
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            break;
+        }
+        thread::sleep(remaining.min(Duration::from_millis(5)));
+    }
+    if *termination_requested {
+        return Ok(StopOutcome::TerminationPending);
+    }
+    if let Err(error) = process.terminate() {
+        return if process.has_exited()? {
+            Ok(StopOutcome::Exited)
+        } else {
+            Err(error)
+        };
+    }
+    *termination_requested = true;
+    if process.has_exited()? {
+        Ok(StopOutcome::ForcedExited)
+    } else {
+        Ok(StopOutcome::TerminationPending)
+    }
+}
+
+fn start_writer(
+    mut input: Box<dyn io::Write + Send>,
+    outbound: mpsc::Receiver<Message>,
+    errors: mpsc::SyncSender<ChildEvent>,
+    overflow: Arc<AtomicBool>,
+) -> io::Result<JoinHandle<()>> {
+    thread::Builder::new()
+        .name("ui-pipe-writer".into())
+        .spawn(move || {
+            while let Ok(message) = outbound.recv() {
+                if let Err(error) = write_message(&mut input, &message) {
+                    if errors
+                        .try_send(ChildEvent::Failed(format!("UI write: {error}")))
+                        .is_err()
+                    {
+                        overflow.store(true, Ordering::Release);
+                    }
+                    break;
+                }
+            }
+        })
+}
+
+fn start_reader(
+    mut output: Box<dyn io::Read + Send>,
+    inbound: mpsc::SyncSender<ChildEvent>,
+    overflow: Arc<AtomicBool>,
+) -> io::Result<JoinHandle<()>> {
+    thread::Builder::new()
+        .name("ui-pipe-reader".into())
+        .spawn(move || {
+            loop {
+                let event = match read_next(&mut output) {
+                    Ok(Some(message)) => ChildEvent::Message(message),
+                    Ok(None) => ChildEvent::Disconnected,
+                    Err(error) => ChildEvent::Failed(format!("UI read: {error}")),
+                };
+                let stop = matches!(event, ChildEvent::Failed(_) | ChildEvent::Disconnected);
+                if inbound.try_send(event).is_err() {
+                    overflow.store(true, Ordering::Release);
+                    break;
+                }
+                if stop {
+                    break;
+                }
+            }
+        })
 }
 
 fn validate_reply(
@@ -108,12 +246,16 @@ impl Supervisor {
     }
     #[must_use]
     pub fn is_ready(&self) -> bool {
-        self.session.as_ref().is_some_and(|session| session.ready)
+        self.session.as_ref().is_some_and(|session| {
+            session.ready && session.outbound.is_some() && !session.termination_requested
+        })
     }
 
     /// Spawn a child with private pipes; its UI must use separate terminal handles.
     /// # Errors
     /// Returns an error if a child already exists, generation overflows, or spawn fails.
+    /// If setup fails after process creation, the supervisor may retain that child
+    /// for bounded cleanup; check `is_running` and retry shutdown or poll.
     pub fn spawn(
         &mut self,
         program: &Path,
@@ -137,7 +279,7 @@ impl Supervisor {
             ));
         }
         let launcher::Spawned {
-            process: mut child,
+            process: child,
             input,
             output,
             bootstrap,
@@ -147,75 +289,52 @@ impl Supervisor {
         let overflow = Arc::new(AtomicBool::new(false));
         let writer_errors = in_tx.clone();
         let writer_overflow = Arc::clone(&overflow);
-        let writer = thread::Builder::new()
-            .name("ui-pipe-writer".into())
-            .spawn(move || {
-                let mut input = input;
-                while let Ok(message) = out_rx.recv() {
-                    if let Err(error) = write_message(&mut input, &message) {
-                        if writer_errors
-                            .try_send(ChildEvent::Failed(format!("UI write: {error}")))
-                            .is_err()
-                        {
-                            writer_overflow.store(true, Ordering::Release);
-                        }
-                        break;
-                    }
-                }
-            });
+        let writer = start_writer(input, out_rx, writer_errors, writer_overflow);
         let writer = match writer {
             Ok(writer) => writer,
             Err(error) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(error);
+                self.generation = generation;
+                self.session = Some(Session::new(
+                    child, bootstrap, None, in_rx, overflow, None, None,
+                ));
+                let cleanup = self.shutdown(Duration::ZERO);
+                return Err(io::Error::other(format!(
+                    "UI writer start: {error}; cleanup: {cleanup:?}"
+                )));
             }
         };
         let reader_overflow = Arc::clone(&overflow);
-        let reader = thread::Builder::new()
-            .name("ui-pipe-reader".into())
-            .spawn(move || {
-                let mut output = output;
-                loop {
-                    let event = match read_next(&mut output) {
-                        Ok(Some(message)) => ChildEvent::Message(message),
-                        Ok(None) => ChildEvent::Disconnected,
-                        Err(error) => ChildEvent::Failed(format!("UI read: {error}")),
-                    };
-                    let stop = matches!(event, ChildEvent::Failed(_) | ChildEvent::Disconnected);
-                    if in_tx.try_send(event).is_err() {
-                        reader_overflow.store(true, Ordering::Release);
-                        break;
-                    }
-                    if stop {
-                        break;
-                    }
-                }
-            });
+        let reader = start_reader(output, in_tx, reader_overflow);
         let reader = match reader {
             Ok(reader) => reader,
             Err(error) => {
                 drop(out_tx);
-                let _ = child.kill();
-                let _ = child.wait();
-                let _ = writer.join();
-                return Err(error);
+                self.generation = generation;
+                self.session = Some(Session::new(
+                    child,
+                    bootstrap,
+                    None,
+                    in_rx,
+                    overflow,
+                    Some(writer),
+                    None,
+                ));
+                let cleanup = self.shutdown(Duration::ZERO);
+                return Err(io::Error::other(format!(
+                    "UI reader start: {error}; cleanup: {cleanup:?}"
+                )));
             }
         };
         self.generation = generation;
-        self.session = Some(Session {
+        self.session = Some(Session::new(
             child,
             bootstrap,
-            outbound: Some(out_tx),
-            inbound: in_rx,
+            Some(out_tx),
+            in_rx,
             overflow,
-            writer: Some(writer),
-            reader: Some(reader),
-            ready: false,
-            sent: 0,
-            ack: 0,
-            outstanding: VecDeque::new(),
-        });
+            Some(writer),
+            Some(reader),
+        ));
         self.queue(Message::Hello { generation })?;
         Ok(generation)
     }
@@ -352,69 +471,150 @@ impl Supervisor {
         Ok(None)
     }
 
-    /// Request close, then terminate only this owned child if it misses the deadline.
+    /// Request close, then request termination only for this owned child at the deadline.
+    /// If exit is not yet observed, retain the session and handle for polling or retry.
     /// # Errors
     /// Returns an error if the child cannot be stopped or reaped.
     pub fn shutdown(&mut self, timeout: Duration) -> io::Result<()> {
         if self.session.is_none() {
             return Ok(());
         }
-        let deadline = Instant::now().checked_add(timeout).ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "UI shutdown deadline exceeds clock range",
-            )
-        })?;
         let _ = self.queue(Message::Close {
             generation: self.generation,
         });
         if let Some(session) = self.session.as_mut() {
             session.outbound.take();
         }
-        loop {
-            if let Some(session) = self.session.as_mut()
-                && session.child.try_wait()?.is_some()
-            {
-                let mut session = self
-                    .session
-                    .take()
-                    .ok_or_else(|| io::Error::other("UI session disappeared"))?;
-                for thread in [&mut session.writer, &mut session.reader] {
-                    if thread.as_ref().is_some_and(JoinHandle::is_finished)
-                        && let Some(thread) = thread.take()
-                    {
-                        let _ = thread.join();
-                    }
-                }
-                return Ok(());
-            }
-            if Instant::now() >= deadline {
-                break;
-            }
-            thread::sleep(Duration::from_millis(5));
-        }
         let session = self
             .session
             .as_mut()
             .ok_or_else(|| io::Error::other("UI session disappeared"))?;
-        if let Err(error) = session.child.kill() {
-            if session.child.try_wait()?.is_some() {
-                let _ = self.session.take();
-                return Ok(());
+        let outcome = stop_process(
+            &mut session.child,
+            &mut session.termination_requested,
+            timeout,
+        )?;
+        if outcome != StopOutcome::TerminationPending {
+            let mut session = self
+                .session
+                .take()
+                .ok_or_else(|| io::Error::other("UI session disappeared"))?;
+            for thread in [&mut session.writer, &mut session.reader] {
+                if thread.as_ref().is_some_and(JoinHandle::is_finished)
+                    && let Some(thread) = thread.take()
+                {
+                    let _ = thread.join();
+                }
             }
-            return Err(error);
         }
-        session.child.wait()?;
-        let _ = self.session.take();
-        Err(io::Error::new(
-            io::ErrorKind::TimedOut,
-            "owned UI child terminated after shutdown timeout",
-        ))
+        match outcome {
+            StopOutcome::Exited => Ok(()),
+            StopOutcome::ForcedExited => Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "owned UI child terminated after shutdown deadline",
+            )),
+            StopOutcome::TerminationPending => Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "owned UI child termination requested; exit not yet observed",
+            )),
+        }
     }
 }
 
 impl Drop for Supervisor {
     fn drop(&mut self) {
-        let _ = self.shutdown(Duration::from_millis(250));
+        if let Err(error) = self.shutdown(Duration::from_millis(250))
+            && self.is_running()
+        {
+            tracing::error!(%error, "UI child cleanup incomplete; process may still be running");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct FakeProcess {
+        exited: bool,
+        exit_on_terminate: bool,
+        terminate_fails: bool,
+        terminations: usize,
+    }
+    impl ManagedProcess for FakeProcess {
+        fn has_exited(&mut self) -> io::Result<bool> {
+            Ok(self.exited)
+        }
+        fn terminate(&mut self) -> io::Result<()> {
+            self.terminations += 1;
+            if self.terminate_fails {
+                return Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "injected failure",
+                ));
+            }
+            self.exited = self.exit_on_terminate;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn never_signalled_termination_is_bounded_and_retained_for_retry() {
+        let mut process = FakeProcess::default();
+        let mut requested = false;
+        assert_eq!(
+            stop_process(&mut process, &mut requested, Duration::ZERO).unwrap(),
+            StopOutcome::TerminationPending
+        );
+        assert!(requested);
+        assert_eq!(
+            stop_process(&mut process, &mut requested, Duration::ZERO).unwrap(),
+            StopOutcome::TerminationPending
+        );
+        assert_eq!(process.terminations, 1);
+        process.exited = true;
+        assert_eq!(
+            stop_process(&mut process, &mut requested, Duration::ZERO).unwrap(),
+            StopOutcome::Exited
+        );
+    }
+
+    #[test]
+    fn terminate_failure_does_not_report_exit_or_consume_retry() {
+        let mut process = FakeProcess {
+            terminate_fails: true,
+            ..FakeProcess::default()
+        };
+        let mut requested = false;
+        assert_eq!(
+            stop_process(&mut process, &mut requested, Duration::ZERO)
+                .unwrap_err()
+                .kind(),
+            io::ErrorKind::PermissionDenied
+        );
+        assert!(!requested);
+        assert!(!process.exited);
+        process.terminate_fails = false;
+        process.exit_on_terminate = true;
+        assert_eq!(
+            stop_process(&mut process, &mut requested, Duration::ZERO).unwrap(),
+            StopOutcome::ForcedExited
+        );
+        assert_eq!(process.terminations, 2);
+    }
+
+    #[test]
+    fn already_exited_child_is_not_terminated() {
+        let mut process = FakeProcess {
+            exited: true,
+            ..FakeProcess::default()
+        };
+        let mut requested = false;
+        assert_eq!(
+            stop_process(&mut process, &mut requested, Duration::ZERO).unwrap(),
+            StopOutcome::Exited
+        );
+        assert_eq!(process.terminations, 0);
     }
 }

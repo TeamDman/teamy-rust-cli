@@ -53,14 +53,6 @@ impl Process {
         // SAFETY: This handle refers only to the child this launcher created.
         unsafe { TerminateProcess(self.raw(), 1) }.map_err(io::Error::other)
     }
-    pub fn wait(&mut self) -> io::Result<ExitStatus> {
-        // SAFETY: The process handle remains owned while waiting for this child.
-        if unsafe { WaitForSingleObject(self.raw(), u32::MAX) } != WAIT_OBJECT_0 {
-            return Err(io::Error::last_os_error());
-        }
-        self.try_wait()?
-            .ok_or_else(|| io::Error::other("child did not exit"))
-    }
 }
 
 /// Parent copies of child ends are held only until Ready or child exit.

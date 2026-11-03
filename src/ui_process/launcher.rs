@@ -35,9 +35,6 @@ impl Process {
     pub fn kill(&mut self) -> io::Result<()> {
         self.0.kill()
     }
-    pub fn wait(&mut self) -> io::Result<ExitStatus> {
-        self.0.wait()
-    }
 }
 
 #[cfg(not(windows))]

@@ -209,6 +209,9 @@ fn disconnect_is_observed_while_child_is_alive_and_deadline_cleans_it_up() {
             .kind(),
         io::ErrorKind::TimedOut
     );
+    if supervisor.is_running() {
+        supervisor.shutdown(Duration::from_secs(2)).unwrap();
+    }
     assert!(!supervisor.is_running());
 }
 
@@ -362,6 +365,9 @@ fn slow_reader_cannot_block_owner_and_owned_child_is_cleaned_up() {
             .kind(),
         io::ErrorKind::TimedOut
     );
+    if supervisor.is_running() {
+        supervisor.shutdown(Duration::from_secs(2)).unwrap();
+    }
     assert!(!supervisor.is_running());
 }
 

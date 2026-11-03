@@ -182,5 +182,19 @@ transient state is not retained automatically and must not become a keystroke lo
 `ChildEvent::Disconnected` reports clean pipe EOF independently of process exit.
 The owner must immediately cancel any UI-bound operation such as binding capture,
 preserve the previous binding, and call `Supervisor::shutdown` with an explicit
-bounded deadline. On timeout it terminates only the owned child and reports the
-timeout. Background input matching and retained history remain owner-managed.
+bounded deadline. At the deadline it requests termination only for the owned
+child and performs one nonblocking exit check. If exit is unconfirmed, it reports
+timeout and retains the process handle and session: do not spawn a replacement;
+poll or retry shutdown until exit is observed. A failed termination also retains
+ownership for a retry. A repeated shutdown does not repeatedly terminate a child
+whose termination was already requested. If setup fails after starting a child,
+check `is_running` and complete cleanup in the same way.
+
+Dropping a supervisor makes one bounded cleanup attempt. If a child is still
+unconfirmed, Drop emits a tracing error (if a subscriber is available) and releases ownership; it cannot guarantee
+that the operating system has stopped the process or that blocked pipe workers
+have finished. An owner that needs this guarantee must keep the supervisor alive,
+surface the error, and retry or poll. The deadline controls our sleeps and avoids
+an infinite wait after termination; individual OS calls and scheduler delays are
+not real-time guarantees. Background input matching and retained history remain
+owner-managed.
