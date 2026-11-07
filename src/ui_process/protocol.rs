@@ -225,7 +225,7 @@ mod tests {
         };
         let mut wire = Vec::new();
         write_message(&mut wire, &message).unwrap();
-        assert_eq!(read_message(&wire[..]).unwrap(), message);
+        assert_eq!(read_message(wire.as_slice()).unwrap(), message);
         assert_eq!(
             write_message(
                 Vec::new(),
@@ -246,7 +246,7 @@ mod tests {
         oversized.extend_from_slice(&17u16.to_be_bytes());
         oversized.resize(4 + 13 + MAX_APP_BYTES, 0);
         assert_eq!(
-            read_message(&oversized[..]).unwrap_err().kind(),
+            read_message(oversized.as_slice()).unwrap_err().kind(),
             io::ErrorKind::InvalidData
         );
     }
