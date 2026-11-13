@@ -129,7 +129,7 @@ fn each_output_format_stops_writing_and_keeps_typed_cancellation() -> eyre::Resu
             assert_eq!(writer.write_calls, 1);
             assert!(!writer.bytes.is_empty());
             assert_eq!(writer.flushes, 0);
-            Ok::<_, eyre::Report>(())
+            eyre::Ok(())
         })?;
     }
     Ok(())
@@ -181,7 +181,7 @@ fn successful_output_has_one_final_line_ending_and_one_flush() -> eyre::Result<(
             assert!(writer.bytes.ends_with(b"\n"));
             assert!(!writer.bytes.ends_with(b"\n\n"));
             assert_eq!(writer.flushes, 1);
-            Ok::<_, eyre::Report>(())
+            eyre::Ok(())
         })?;
     }
     Ok(())
@@ -204,7 +204,7 @@ fn injected_writer_uses_automatic_json_and_explicit_format_overrides() -> eyre::
             let record: Record = facet_json::from_str(&text).unwrap();
             assert_eq!(record.id, 7);
             assert_eq!(record.text, "captured output");
-            Ok::<_, eyre::Report>(())
+            eyre::Ok(())
         })?;
     }
     Ok(())
@@ -227,7 +227,7 @@ fn text_colors_follow_the_supplied_terminal_status() -> eyre::Result<()> {
                     .unwrap()
                     .contains("captured output")
             );
-            Ok::<_, eyre::Report>(())
+            eyre::Ok(())
         })?;
     }
     Ok(())
@@ -275,7 +275,7 @@ fn partial_payload_and_newline_failures_keep_the_prefix_without_flushing() -> ey
             assert!(error.to_string().contains(context));
             assert_eq!(writer.bytes, prefix);
             assert_eq!(writer.flushes, 0);
-            Ok::<_, eyre::Report>(())
+            eyre::Ok(())
         })?;
     }
     Ok(())
