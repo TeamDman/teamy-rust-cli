@@ -119,16 +119,18 @@ These names are placeholders and should be renamed in the generated project.
 
 The canonical Rust names alias TeamDman's independent published forks:
 
-- `facet` uses `teamy-facet =0.50.0-rc.8`; `facet-pretty` and the unchanged core/reflection packages remain at `=0.50.0-rc.7`.
-- `facet-csv` and `facet-json` use their `teamy-facet-* =0.50.0-rc.10` packages; the shared `teamy-facet-format` dependency also uses `=0.50.0-rc.10`.
-- `figue` uses `teamy-figue =6.0.0-rc.6`, with `teamy-figue-attrs =6.0.0-rc.4`.
-- `teamy-cancellation =0.8.1` supplies matching Figue arguments, cancellation execution scopes, and synchronous I/O checkpoints.
+- `facet` uses `teamy-facet =0.50.0-rc.9`; `facet-pretty` and the unchanged core/reflection packages remain at `=0.50.0-rc.7`.
+- `facet-csv` and `facet-json` use their `teamy-facet-* =0.50.0-rc.11` packages; the unchanged shared `teamy-facet-format` dependency remains at `=0.50.0-rc.10`.
+- `figue` uses `teamy-figue =6.0.0-rc.7`, with `teamy-figue-attrs =6.0.0-rc.5`.
+- `teamy-cancellation =0.8.2` supplies matching Figue arguments, cancellation execution scopes, and synchronous I/O checkpoints.
 
 These are forks, not the upstream Facet or Figue releases. The mixed Facet
 versions are deliberate: the fixed derive and Cow decoder share one unchanged
-Facet rc.7 core identity. Each package resolves to one version, without patches.
+Facet rc.7 core identity. The derive gives nongeneric enums canonical shared
+metadata, and cancellation shares scope lifecycle code across typed futures.
+Each package resolves to one version, without patches.
 
-NDJSON log files use `teamy-tracing =0.2.1` with Facet JSON. Windows resources use
+NDJSON log files use `teamy-tracing =0.2.2` with Facet JSON. Windows resources use
 `teamy-embed-resource =0.1.0` with manifest discovery disabled;
 `compile_for_everything()` embeds the manifest and icon in binaries, examples,
 and tests. These dependencies replace the Serde-backed JSON logger and TOML
