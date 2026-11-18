@@ -10,20 +10,22 @@ argument-hint: Describe the destination path, intended crate name, binary name, 
 - You want to start a new Rust CLI from the `teamy-rust-cli` template repository.
 - You need the agent to do both the copy step and the mandatory post-copy cleanup.
 - You want a concrete checklist for removing template branding and placeholder defaults.
-- You are working on Windows and can run the template's PowerShell helper.
+- You can run the template's Rust `init` command from a reviewed template checkout.
 
 ## Goal
 Create a usable new CLI repository from `teamy-rust-cli` without carrying forward template-only files, placeholder names, or outdated examples.
 
 The result should build, show the correct help text, use the new crate identity everywhere, and pass the normal validation flow.
 
+Use `teamy-rust-cli` as the shared CLI foundation and [Cloud Terrastodon](https://github.com/AAFC-Cloud/Cloud-Terrastodon) as a style guide for relevant typed domain, request/operation, logging, and module patterns. Apply the maintained TeamyStyle guidance when evaluating those examples; referencing Cloud Terrastodon does not require depending on its Azure crates.
+
 ## Procedure
 1. Confirm the destination and project identity.
    Collect the destination path, crate name, repository URL, human-readable description, and the app-specific home and cache environment variable names.
-2. Copy the template with the helper script.
-   From the `teamy-rust-cli` repository, run `./init-other-repo.ps1 <destination>`. This copies the template while excluding `.git`, `target`, and the template-only skill directory for this workflow.
-3. Verify what the helper intentionally preserves.
-   If the destination already had `README.md` or `LICENSE`, the helper leaves those files in place. Do not assume the copied template README or license exists in that case.
+2. Inspect the source and run the maintained initializer.
+   From the reviewed `teamy-rust-cli` checkout, run `cargo run -- init <destination>`. The source directory is embedded at compile time through `CARGO_MANIFEST_DIR`; it is not a Git-tracked-file allowlist. Inspect untracked and ignored files before copying. The initializer excludes root `.git`, root `target`, this initialization skill directory, and the legacy `init-other-repo.ps1` script. It rejects conflicting generated files unless `--force` is explicitly supplied; do not use that flag without reviewing the overwrite scope.
+3. Verify what the initializer intentionally preserves.
+   If the destination already had `README.md` or `LICENSE`, the initializer leaves those files in place. Do not assume the copied template README or license exists in that case.
 4. Replace package metadata.
    Update `Cargo.toml` fields that still describe the template, especially `name`, `description`, `repository`, `documentation`, and `keywords`.
 5. Replace crate-path references.
@@ -46,7 +48,7 @@ The result should build, show the correct help text, use the new crate identity 
 ## Recommended Commands
 
 ```powershell
-./init-other-repo.ps1 ../my-new-cli
+cargo run -- init ../my-new-cli
 ```
 
 ```powershell
@@ -93,8 +95,8 @@ cargo run -- --help
 ## Common Pitfalls
 - Forgetting to rename the crate path in both `src/main.rs` and `tests/cli_fuzzing.rs`.
 - Leaving `APP_HOME_DIR` and `APP_CACHE_DIR` in place, which leaks template-specific environment variables into the new project.
-- Assuming the helper copies `init-other-repo.ps1`; it intentionally does not.
-- Assuming the helper overwrites destination `README.md` or `LICENSE`; it intentionally preserves existing ones.
+- Using `init-other-repo.ps1` for new automation; it is only a legacy compatibility entrypoint and is excluded from the scaffold.
+- Assuming the initializer overwrites destination `README.md` or `LICENSE`; it intentionally preserves existing ones.
 
 ## Example Prompt Starters
 - `/initialize-from-teamy-rust-cli Create a new CLI in ../my-new-cli named meta-takeout with repo TeamDman/meta-takeout.`

@@ -76,6 +76,7 @@ unsafe_op_in_unsafe_fn = "warn"
 unused_lifetimes = "warn"
 
 [lints.clippy]
+absolute_paths = "warn"
 disallowed_macros = "deny"
 disallowed_methods = "deny"
 cargo = { level = "warn", priority = -1 }
