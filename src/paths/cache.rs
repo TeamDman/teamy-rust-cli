@@ -36,7 +36,7 @@ impl CacheHome {
         if let Some(project_dirs) = ProjectDirs::from("", "TeamDman", super::APP_CACHE_DIR_NAME) {
             Ok(CacheHome(project_dirs.cache_dir().to_path_buf()))
         } else {
-            bail!("Could not determine cache directory")
+            bail!("Could not determine cache directory");
         }
     }
 }

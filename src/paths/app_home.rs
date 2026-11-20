@@ -54,7 +54,7 @@ impl AppHome {
         if let Some(project_dirs) = ProjectDirs::from("", "TeamDman", super::APP_HOME_DIR_NAME) {
             Ok(AppHome(project_dirs.config_dir().to_path_buf()))
         } else {
-            bail!("Could not determine config directory")
+            bail!("Could not determine config directory");
         }
     }
 
