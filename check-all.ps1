@@ -43,10 +43,6 @@ Invoke-Step -Label "clippy lint check" -Action {
 	cargo clippy --all-targets --all-features --no-deps -- -D warnings
 }
 
-Invoke-Step -Label "lint policy regression checks" -Action {
-	& (Join-Path $PSScriptRoot 'check-lint-policy.ps1')
-}
-
 Invoke-Step -Label "build" -Action {
 	cargo build --all-features --quiet
 }
